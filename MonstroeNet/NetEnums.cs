@@ -18,11 +18,15 @@ namespace MonstroeNet
         Listener
     }
 
-    public enum DisconnectReason
+    public enum DisconnectCode
     {
-        ConnectionRejected,
-        ConnectionClosedSafely,
-        ConnectionClosedForcefully,
-        SocketError
+        ConnectionRejected = -1,
+        ConnectionClosedSafely = -2,
+        ConnectionClosedForcefully = -3,
+        ReceivedPacketOverBufferSize = -4,
+        ReceivedPacketOverMaxSize = -5,
+        ReceivedPacketUnderMinSize = -6,
+        ReceivedInvalidPacket = -7,
+        SocketError = -8,
     }
 }

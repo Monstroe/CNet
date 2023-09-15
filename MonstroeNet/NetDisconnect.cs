@@ -7,9 +7,9 @@ namespace MonstroeNet
 {
     public class NetDisconnect
     {
-        public DisconnectReason DisconnectReason
+        public DisconnectCode DisconnectCode
         {
-            get { return disconnectReason; }
+            get { return disconnectCode; }
         }
 
         public NetPacket DisconnectData
@@ -22,26 +22,26 @@ namespace MonstroeNet
             get { return socketError; }
         }
 
-        private DisconnectReason disconnectReason;
+        private DisconnectCode disconnectCode;
         private NetPacket disconnectData;
         private SocketError socketError;
 
-        internal NetDisconnect(DisconnectReason reason)
+        internal NetDisconnect(DisconnectCode reason)
         {
-            disconnectReason = reason;
+            disconnectCode = reason;
         }
 
-        internal NetDisconnect(DisconnectReason reason, NetPacket data) : this(reason)
+        internal NetDisconnect(DisconnectCode reason, NetPacket data) : this(reason)
         {
             disconnectData = data;
         }
 
-        internal NetDisconnect(DisconnectReason reason, SocketError error) : this(reason)
+        internal NetDisconnect(DisconnectCode reason, SocketError error) : this(reason)
         {
             socketError = error;
         }
 
-        internal NetDisconnect(DisconnectReason reason, NetPacket data, SocketError error) : this(reason, data)
+        internal NetDisconnect(DisconnectCode reason, NetPacket data, SocketError error) : this(reason, data)
         {
             socketError = error;
         }
