@@ -22,9 +22,13 @@ namespace MonstroeNet
             public int MaxPacketSize { get; set; }
         }
 
-        enum ConnectionStatus
+        enum PacketStatus
         {
             Disconnect = -1,
+            DisconnectForcefully = -2,
+            OverMaxPacketSize = -3,
+            UnderMinPacketSize = -4,
+            OverBufferSize = -5,
             Accept = 1,
             Deny = 0
         }
@@ -177,7 +181,7 @@ namespace MonstroeNet
                 try
                 {
                     var receivedData = await ReceiveTCPAsync(remoteEP, new NetPacket(), new byte[TCP.MaxPacketSize], 0, 4, cancellationTokenSource.IsCancellationRequested);
-                    if(receivedData.Item1.ReadInt() == (int)ConnectionStatus.Accept)
+                    if(receivedData.Item1.ReadInt(false) == (int)PacketStatus.Accept)
                     {
                         connections.Add(ep, remoteEP);
                         OnConnected?.Invoke(remoteEP);
@@ -185,7 +189,11 @@ namespace MonstroeNet
                     }
                     else
                     {
-                        // CALL DISCONNECT
+                        if(receivedData.Item1.ReadInt(false) == (int)PacketStatus.Deny)
+                        {
+                            // CALL DISCONNECT
+                        }
+
                         Close();
                     }
                 }
@@ -308,7 +316,7 @@ namespace MonstroeNet
             {
                 try
                 {
-                    packet.Write((int)ConnectionStatus.Disconnect);
+                    packet.Write((int)PacketStatus.Disconnect);
                     ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
                     await remoteEP.tcpSocket.SendAsync(segBuffer, SocketFlags.None);
                     returnValue = true;
@@ -345,7 +353,7 @@ namespace MonstroeNet
         {
             using (NetPacket packet = new NetPacket())
             {
-                packet.Write((int)ConnectionStatus.Accept);
+                packet.Write((int)PacketStatus.Accept);
                 await SendPacket(remoteEP, packet, PacketProtocol.TCP);
             }
         }
@@ -354,7 +362,7 @@ namespace MonstroeNet
         {
             using (NetPacket packet = new NetPacket())
             {
-                packet.Write((int)ConnectionStatus.Deny);
+                packet.Write((int)PacketStatus.Deny);
                 if(await SendPacket(remoteEP, packet, PacketProtocol.TCP))
                 {
                     DisconnectForcefully(remoteEP);
@@ -439,15 +447,28 @@ namespace MonstroeNet
                     (finalPacket, offset, size) = await ReceiveTCPAsync(netEndPoint, receivedPacket, buffer, offset, size, cancellationTokenSource.IsCancellationRequested);
                     receivedPacket.Clear();
 
-                    if(finalPacket.ReadInt() <= (int)ConnectionStatus.Disconnect)
+                    switch(finalPacket.ReadInt(false))
                     {
-                        DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectReason.ConnectionClosedSafely)); //ADD DISCONNECT MESSAGE HERE IN THE FUTURE);
+                        case (int)PacketStatus.Disconnect: 
+                            DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectReason.ConnectionClosedSafely)); //ADD DISCONNECT MESSAGE HERE IN THE FUTURE
+                            break;
+                        case (int)PacketStatus.DisconnectForcefully:
+                            DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectReason.ConnectionClosedForcefully));
+                    }
+
+                    if(finalPacket.ReadInt(false) == (int)PacketStatus.Disconnect)
+                    {
+                        DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectReason.ConnectionClosedSafely)); //ADD DISCONNECT MESSAGE HERE IN THE FUTURE
                         break;
                     }
-                    else if(finalPacket  == null)
+                    else if(finalPacket.ReadInt(false) == (int)PacketStatus.DisconnectForcefully)
                     {
                         DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectReason.ConnectionClosedForcefully));
                         break;
+                    }
+                    else if(finalPacket.ReadInt(false) == (int)PacketStatus.UnderMinPacketSize)
+                    {
+
                     }
 
                     packetReceiveQueue.Enqueue((netEndPoint, finalPacket, PacketProtocol.TCP));
@@ -470,6 +491,7 @@ namespace MonstroeNet
             int packetOffset = 0;
             int expectedLength = 0;
             bool grabbedPacketLength = false;
+            bool packetComplete = false;
 
             while (!cancellationRequested)
             {
@@ -478,7 +500,8 @@ namespace MonstroeNet
                 // If a completely blank packet was sent
                 if (receivedBytes == 0)
                 {
-                    return (null, 0, 0);
+                    finalPacket.Write((int)PacketStatus.DisconnectForcefully);
+                    packetComplete = true;
                 }
 
                 var data = segBuffer.Slice(packetOffset, receivedBytes + segBuffer.Offset - packetOffset);
@@ -498,33 +521,41 @@ namespace MonstroeNet
                     if (expectedLength < 0)
                     {
                         finalPacket.Write(expectedLength);
-                        break;
+                        packetComplete = true;
+                    }
+                    // If the expected length of the packet is greater than the set TCP buffer size
+                    else if (expectedLength > TCP.BufferSize)
+                    {
+                        finalPacket.Write((int)PacketStatus.OverBufferSize);
+                        packetComplete = true;
+                    }
+                    // If the expected length of the packet is greater than the set max packet size
+                    else if (expectedLength > TCP.MaxPacketSize)
+                    {
+                        finalPacket.Write((int)PacketStatus.OverMaxPacketSize);
+                        packetComplete = true;
+                    }
+                    // If the expected length of the packet is less than the set min packet size
+                    else if (expectedLength < TCP.MinPacketSize)
+                    {
+                        finalPacket.Write((int)PacketStatus.UnderMinPacketSize);
+                        packetComplete = true;
                     }
 
-                    // If the expected length of the packet is less than or equal to 0
-                    if (expectedLength < TCP.MinPacketSize)
-                    {
-                        // TODO: Send Malicious Error
-                        break;
-                    }
-                    if (expectedLength > TCP.MaxPacketSize)
-                    {
-                        // TODO: Send Malicious Error
-                        break;
-                    }
-                    if (expectedLength > TCP.BufferSize)
-                    {
-                        // TODO: Send Malicious Error
-                        break;
-                    }
 
                     // If all the bytes in the packet have been received
-                    if (expectedLength <= receivedPacket.UnreadLength)
+                    else if (expectedLength <= receivedPacket.UnreadLength)
                     {
                         finalPacket.Write(receivedPacket.ReadBytes(expectedLength));
-                        segBuffer = segBuffer.Slice(segBuffer.Offset + finalPacket.Length, receivedPacket.UnreadLength);
-                        break;
+                        packetComplete = true;
                     }
+                }
+
+                // If the final packet has been built
+                if (packetComplete)
+                {
+                    segBuffer = segBuffer.Slice(segBuffer.Offset + finalPacket.Length, receivedPacket.UnreadLength);
+                    break;
                 }
 
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
