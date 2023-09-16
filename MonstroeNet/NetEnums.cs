@@ -20,9 +20,9 @@ namespace MonstroeNet
 
     public enum DisconnectCode
     {
-        ConnectionRejected = -1,
-        ConnectionClosedSafely = -2,
-        ConnectionClosedForcefully = -3,
+        ConnectionClosedSafely = -1,
+        ConnectionClosedForcefully = -2,
+        ConnectionRejected = -3,
         PacketOverBufferSize = -4,
         PacketOverMaxSize = -5,
         PacketUnderMinSize = -6,
