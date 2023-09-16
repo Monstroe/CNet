@@ -336,5 +336,9 @@ namespace MonstroeNet
             }
         }
 
+        ~NetPacket()
+        {
+            Dispose(false);
+        }
     }
 }

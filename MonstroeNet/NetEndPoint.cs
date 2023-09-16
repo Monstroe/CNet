@@ -28,6 +28,11 @@ namespace MonstroeNet
         internal NetPacket receivedPacket;
         private NetSystem netSystem;
 
+        internal NetEndPoint(NetSystem netSystem)
+        {
+            this.netSystem = netSystem;
+        }
+
         internal NetEndPoint(IPEndPoint ipEndPoint, Socket tcpSocket, NetSystem netSystem)
         {
             EndPoint = ipEndPoint;
