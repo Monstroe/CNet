@@ -256,7 +256,7 @@ namespace MonstroeNet
                     {
                         errorQueue.Enqueue(ex);
                     }
-                    catch (ObjectDisposedException) { /* Catch this error when 'Close' is called */ }
+                    catch (ObjectDisposedException) { Console.WriteLine("Object 'tcpSocket' disposed."); /* Catch this error when 'Close' is called */ }
                 }
             }, cancellationTokenSource.Token);
         }
@@ -504,7 +504,7 @@ namespace MonstroeNet
                 errorQueue.Enqueue(ex);
                 await DisconnectSafely(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), DisconnectCode.SocketError);
             }
-            catch (ObjectDisposedException) { /* Catch this error when 'Close' is called */ }
+            catch (ObjectDisposedException) { Console.WriteLine("Object netEndPoint.tcpSocket disposed."); /* Catch this error when 'Close' is called */ }
 
             receivedPacket.Dispose();
             packetPool.Return(buffer);
@@ -525,6 +525,7 @@ namespace MonstroeNet
             {
                 var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None);//, netEndPoint.cancellationTokenSource.Token);
 
+                Console.WriteLine("Received " + receivedBytes + " bytes.");
                 //if(netEndPoint.cancellationTokenSource.IsCancellationRequested)
                 //{
                 //    break;
@@ -623,7 +624,7 @@ namespace MonstroeNet
                 {
                     errorQueue.Enqueue(ex);
                 }
-                catch (ObjectDisposedException) { /* Catch this error when 'Close' is called */ }
+                catch (ObjectDisposedException) { Console.WriteLine("Object udpSocket disposed."); /* Catch this error when 'Close' is called */ }
             }
 
             receivedPacket.Dispose();

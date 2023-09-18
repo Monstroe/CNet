@@ -63,12 +63,12 @@ namespace TestClient
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Received!");
+            Console.WriteLine("Packet Received: " + packet.ReadString());
         }
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Error: " + socketException);
+            Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
         }
 
         // Main Method

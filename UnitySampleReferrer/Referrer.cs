@@ -52,23 +52,29 @@ namespace UnitySampleReferrer
         public void OnClientConnected(NetEndPoint remoteEndPoint)
         {
             Console.WriteLine("Client " + remoteEndPoint.EndPoint + " connected!");
-            remoteEndPoint.Disconnect();
+            using (NetPacket packet  = new NetPacket())
+            {
+                packet.Write("Hello Client!");
+                remoteEndPoint.Send(packet, PacketProtocol.TCP);
+            }
+            //remoteEndPoint.Disconnect();
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
-            Console.WriteLine("Client " + remoteEndPoint.EndPoint + " disconnected:" + disconnect.DisconnectCode.ToString());
+            Console.WriteLine("Client " + remoteEndPoint.EndPoint + " disconnected: " + disconnect.DisconnectCode.ToString());
         }
 
         public void OnConnectionRequest(NetRequest request)
         {
             Console.WriteLine("Connection Request: " + request.ClientEndPoint.ToString());
             request.Accept();
+            //request.Deny();
         }
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Exception: " + socketException.ToString());
+            Console.WriteLine("Exception: " + socketException.SocketErrorCode.ToString());
         }
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
