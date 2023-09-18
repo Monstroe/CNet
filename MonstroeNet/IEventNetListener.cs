@@ -13,9 +13,9 @@ namespace MonstroeNet
 
         void OnClientConnected(NetEndPoint remoteEndPoint);
 
-        void OnClientDisconnected(NetDisconnect disconnect);
+        void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect);
 
-        void OnPacketReceive(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol);
+        void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol);
 
         void OnNetworkError(SocketException socketException);
 

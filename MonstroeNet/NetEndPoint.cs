@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MonstroeNet
@@ -26,18 +27,19 @@ namespace MonstroeNet
 
         internal Socket tcpSocket;
         internal NetPacket receivedPacket;
+        //internal CancellationTokenSource cancellationTokenSource;
         private NetSystem netSystem;
 
         internal NetEndPoint(NetSystem netSystem)
         {
             this.netSystem = netSystem;
+            //cancellationTokenSource = new CancellationTokenSource();
         }
 
-        internal NetEndPoint(IPEndPoint ipEndPoint, Socket tcpSocket, NetSystem netSystem)
+        internal NetEndPoint(IPEndPoint ipEndPoint, Socket tcpSocket, NetSystem netSystem) : this(netSystem)
         {
             EndPoint = ipEndPoint;
             this.tcpSocket = tcpSocket;
-            this.netSystem = netSystem;
             receivedPacket = new NetPacket();
         }
 
@@ -49,6 +51,11 @@ namespace MonstroeNet
         public void Disconnect()
         {
             netSystem.Disconnect(this);
+        }
+
+        public void Disconnect(NetPacket disconnectPacket)
+        {
+            netSystem.Disconnect(this, disconnectPacket);
         }
     }
 }

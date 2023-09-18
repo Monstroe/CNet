@@ -10,50 +10,71 @@ namespace TestClient
 {
     internal class Client : IEventNetClient
     {
-        public string IPAddress { get; set; }
-        public int Port { get; set; }
-
-        public Client(string ipAddress, int port)
+        private static Client instance;
+        public static Client Instance
         {
-            IPAddress = ipAddress;
-            Port = port;
+            get
+            {
+                if (instance == null)
+                    instance = new Client();
+                return instance;
+            }
         }
 
-        public void Start()
+        public string IPAddress { get; set; }
+        public int Port
         {
-            Console.WriteLine("Client Started...");
+            get { return client.Port; }
+            set { client.Port = value; }
+        }
 
-            NetSystem system = new NetSystem(IPAddress, Port);
-            system.RegisterInterface(this);
-            system.Start();
-            system.Connect();
+        private NetClient client;
 
+
+        private Client()
+        {
+            client = new NetClient();
+            client.RegisterInterface(this);
+        }
+
+        public void Start(string address, int port)
+        {
+            Console.WriteLine("Client Starting...");
+            client.Address = address;
+            client.Port = port;
+
+            client.Connect();
             Console.WriteLine("Client initialized...");
-
             while (true)
             {
-                system.Update();
+                client.Update();
             }
         }
 
         public void OnConnected(NetEndPoint remoteEndPoint)
         {
-            Console.WriteLine("Connected");
+            Console.WriteLine("Connected to " + remoteEndPoint.EndPoint);
         }
 
-        public void OnDisconnected()
+        public void OnDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
-            Console.WriteLine("Disconnected");
+            Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint + ": " + disconnect.DisconnectCode.ToString());
         }
 
-        public void OnPacketReceive(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
+        public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Receive");
+            Console.WriteLine("Packet Received!");
         }
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Network Error: " + socketException.Message);
+            Console.WriteLine("Error: " + socketException);
+        }
+
+        // Main Method
+        static void Main(string[] args)
+        {
+            Client.Instance.Start("127.0.0.1", 7777);
         }
     }
 }
