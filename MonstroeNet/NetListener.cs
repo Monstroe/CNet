@@ -58,10 +58,10 @@ namespace MonstroeNet
             system.Disconnect(remoteEP);
         }
 
-        public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
-        {
-            system.Disconnect(remoteEP, disconnectPacket);
-        }
+        //public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
+        //{
+        //    system.Disconnect(remoteEP, disconnectPacket);
+        //}
 
         public void DisconnectForcefully(NetEndPoint remoteEP)
         {

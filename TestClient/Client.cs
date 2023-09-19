@@ -63,7 +63,7 @@ namespace TestClient
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Received: " + packet.ReadString());
+            Console.WriteLine("Packet Received: " + packet.ReadString() + ", float: " + packet.ReadFloat());
         }
 
         public void OnNetworkError(SocketException socketException)

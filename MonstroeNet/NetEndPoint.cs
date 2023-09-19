@@ -53,9 +53,14 @@ namespace MonstroeNet
             netSystem.Disconnect(this);
         }
 
-        public void Disconnect(NetPacket disconnectPacket)
+        public void DisconnectForcefully()
         {
-            netSystem.Disconnect(this, disconnectPacket);
+            netSystem.DisconnectForcefully(this);
         }
+
+        //public void Disconnect(NetPacket disconnectPacket)
+        //{
+        //    netSystem.Disconnect(this, disconnectPacket);
+        //}
     }
 }

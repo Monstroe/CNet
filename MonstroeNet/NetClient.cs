@@ -62,11 +62,11 @@ namespace MonstroeNet
             system.Close();
         }
 
-        public void Disconnect(NetPacket disconnectPacket)
-        {
-            system.Disconnect(RemoteEndPoint, disconnectPacket);
-            system.Close();
-        }
+        //public void Disconnect(NetPacket disconnectPacket)
+        //{
+        //    system.Disconnect(RemoteEndPoint, disconnectPacket);
+        //    system.Close();
+        //}
 
         public void DisconnectForcefully()
         {

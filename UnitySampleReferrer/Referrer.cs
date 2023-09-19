@@ -55,9 +55,12 @@ namespace UnitySampleReferrer
             using (NetPacket packet  = new NetPacket())
             {
                 packet.Write("Hello Client!");
+                packet.Write(12.6754f);
                 remoteEndPoint.Send(packet, PacketProtocol.TCP);
+                Console.WriteLine(packet.ReadString(false));
             }
-            //remoteEndPoint.Disconnect();
+            remoteEndPoint.Disconnect();
+            //remoteEndPoint.DisconnectForcefully();
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)

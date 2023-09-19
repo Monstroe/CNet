@@ -124,8 +124,8 @@ namespace MonstroeNet
             //    tcpSocket.Close();
             //if (udpSocket != null)
             //    udpSocket.Close();
-            if (cancellationTokenSource != null)// && cancellationTokenSource.IsCancellationRequested)
-                cancellationTokenSource.Dispose();
+            //if (cancellationTokenSource != null)// && cancellationTokenSource.IsCancellationRequested)
+            //    cancellationTokenSource.Dispose();
             cancellationTokenSource = new CancellationTokenSource();
 
             tcpSocket = new Socket(ep.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -189,8 +189,9 @@ namespace MonstroeNet
                     var receivedData = await ReceiveTCPAsync(remoteEP, new NetPacket(), new byte[TCP.MaxPacketSize], 0, TCP.MaxPacketSize, true);
                     if (receivedData.Item1.ReadInt(false) == (int)RequestStatus.Accept)
                     {
-                        OnConnected?.Invoke(remoteEP);
+                        ReceivePackets();
                         beginReceiveQueue.Enqueue(remoteEP);
+                        OnConnected?.Invoke(remoteEP);
                     }
                     else
                     {
@@ -242,12 +243,6 @@ namespace MonstroeNet
                     try
                     {
                         Socket clientTcpSock = await tcpSocket.AcceptAsync();
-
-                        if (cancellationTokenSource.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
                         NetEndPoint clientEP = new NetEndPoint((IPEndPoint)clientTcpSock.RemoteEndPoint, clientTcpSock, this);
                         NetRequest request = new NetRequest(clientEP, this);
                         connectionRequestQueue.Enqueue(request);
@@ -278,6 +273,11 @@ namespace MonstroeNet
 
         public async void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
         {
+            if (packet.Length > (protocol == PacketProtocol.TCP ? TCP.MaxPacketSize : UDP.MaxPacketSize))
+            {
+                throw new Exception("Packets cannot be larger than " + (protocol == PacketProtocol.TCP ? "TCP." : "UDP") + " 'MaxPacketSize'.");
+            }
+
             packet.InsertLength();
             await SendPacket(remoteEP, packet, protocol);
         }
@@ -314,17 +314,22 @@ namespace MonstroeNet
             await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely));
         }
 
-        public async void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
-        {
-            await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely, disconnectPacket));
-        }
+        //public async void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
+        //{
+        //    await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely, disconnectPacket));
+        //}
 
         private async Task<bool> DisconnectSafely(NetEndPoint remoteEP, NetDisconnect? disconnect = null, DisconnectCode code = DisconnectCode.ConnectionClosedSafely)
         {
             bool returnValue = false;
             using (NetPacket packet = new NetPacket())
             {
-                try
+                packet.Write((int)code);
+                if(await SendPacket(remoteEP, packet, PacketProtocol.TCP))
+                {
+                    DisconnectForcefully(remoteEP, disconnect);
+                }
+                /*try
                 {
                     packet.Write((int)code);
                     ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
@@ -335,7 +340,7 @@ namespace MonstroeNet
                 {
                     errorQueue.Enqueue(ex);
                 }
-                DisconnectForcefully(remoteEP, disconnect);
+                DisconnectForcefully(remoteEP, disconnect);*/
             }
 
             return returnValue;
@@ -380,6 +385,7 @@ namespace MonstroeNet
             beginReceiveQueue.Clear();
             packetReceiveQueue.Clear();
             errorQueue.Clear();
+            cancellationTokenSource.Dispose();
             systemConnected = false;
         }
 
@@ -491,7 +497,7 @@ namespace MonstroeNet
 
                     if (!validPacket)
                     {
-                        await ProcessStatusPacket(finalPacket, netEndPoint);
+                        ProcessStatusPacket(finalPacket, netEndPoint);
                         break;
                     }
 
@@ -502,7 +508,8 @@ namespace MonstroeNet
             catch (SocketException ex)
             {
                 errorQueue.Enqueue(ex);
-                await DisconnectSafely(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), DisconnectCode.SocketError);
+                //await DisconnectSafely(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), DisconnectCode.SocketError);
+                DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
             }
             catch (ObjectDisposedException) { Console.WriteLine("Object netEndPoint.tcpSocket disposed."); /* Catch this error when 'Close' is called */ }
 
@@ -525,7 +532,6 @@ namespace MonstroeNet
             {
                 var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None);//, netEndPoint.cancellationTokenSource.Token);
 
-                Console.WriteLine("Received " + receivedBytes + " bytes.");
                 //if(netEndPoint.cancellationTokenSource.IsCancellationRequested)
                 //{
                 //    break;
@@ -613,7 +619,7 @@ namespace MonstroeNet
 
                     if (!validPacket)
                     {
-                        await ProcessStatusPacket(finalPacket, netEndPoint);
+                        ProcessStatusPacket(finalPacket, netEndPoint);
                         break;
                     }
 
@@ -690,14 +696,14 @@ namespace MonstroeNet
             return (finalPacket, remoteEP, validPacket);
         }
 
-        private async Task ProcessStatusPacket(NetPacket finalPacket, NetEndPoint netEndPoint)
+        private void ProcessStatusPacket(NetPacket finalPacket, NetEndPoint netEndPoint)
         {
             int disconnectCode = finalPacket.ReadInt();
             bool containsCode = new List<int>((IEnumerable<int>)Enum.GetValues(typeof(DisconnectCode))).Contains(disconnectCode);
             if (containsCode)
-                await DisconnectSafely(netEndPoint, new NetDisconnect((DisconnectCode)finalPacket.ReadInt(false)), (DisconnectCode)finalPacket.ReadInt(false));
+                DisconnectForcefully(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode));
             else
-                await DisconnectSafely(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket), DisconnectCode.InvalidPacket);
+                DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket));
         }
 
         private bool disposed = false;
