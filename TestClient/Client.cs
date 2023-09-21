@@ -48,6 +48,7 @@ namespace TestClient
             while (true)
             {
                 client.Update();
+                Thread.Sleep(15);
             }
         }
 
@@ -63,7 +64,7 @@ namespace TestClient
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Received: " + packet.ReadString() + ", float: " + packet.ReadFloat());
+            Console.WriteLine("Packet Received: " + packet.ReadString());// + ", float: " + packet.ReadFloat());
         }
 
         public void OnNetworkError(SocketException socketException)

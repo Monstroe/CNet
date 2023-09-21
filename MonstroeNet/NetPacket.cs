@@ -313,11 +313,12 @@ namespace MonstroeNet
             //try
             //{
                 //int strLen = ReadInt(false);
-                int strLen = ReadInt(moveIndexPosition);
+                int strLen = ReadInt(false);
                 //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex + 4, strLen);
-                var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex, strLen).ToArray());
+                //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex, strLen);
+                var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex + 4, strLen).ToArray());
                 //CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
-                CurrentIndex += moveIndexPosition ? strLen : 0;
+                CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
                 return value;
             //}
             //catch

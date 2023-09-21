@@ -25,7 +25,8 @@ namespace MonstroeNet
         ConnectionRejected = -3,
         PacketOverBufferSize = -4,
         PacketOverMaxSize = -5,
-        PacketUnderMinSize = -6,
+        //PacketUnderMinSize = -6,
+        HostClosed = -6,
         InvalidPacket = -7,
         SocketError = -8,
     }

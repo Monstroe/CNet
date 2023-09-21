@@ -46,6 +46,7 @@ namespace UnitySampleReferrer
             while (true)
             {
                 listener.Update();
+                Thread.Sleep(15);
             }
         }
 
@@ -55,12 +56,18 @@ namespace UnitySampleReferrer
             using (NetPacket packet  = new NetPacket())
             {
                 packet.Write("Hello Client!");
-                packet.Write(12.6754f);
+                Console.WriteLine("Packet 1: " + packet.ReadString(false));
                 remoteEndPoint.Send(packet, PacketProtocol.TCP);
-                Console.WriteLine(packet.ReadString(false));
             }
-            remoteEndPoint.Disconnect();
-            //remoteEndPoint.DisconnectForcefully();
+
+            using (NetPacket packet2 = new NetPacket())
+            {
+                packet2.Write("Hello Client 2!");
+                Console.WriteLine("Packet 2: " + packet2.ReadString(false));
+                remoteEndPoint.Send(packet2, PacketProtocol.TCP);
+            }
+            //remoteEndPoint.Disconnect();
+            remoteEndPoint.DisconnectForcefully();
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
@@ -77,7 +84,8 @@ namespace UnitySampleReferrer
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Exception: " + socketException.SocketErrorCode.ToString());
+            //Console.WriteLine("Exception: " + socketException.SocketErrorCode.ToString());
+            Console.WriteLine("Exception: " + socketException.ToString());
         }
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)

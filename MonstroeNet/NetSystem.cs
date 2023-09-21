@@ -69,9 +69,10 @@ namespace MonstroeNet
 
         private ConcurrentQueue<NetRequest> connectionRequestQueue;
         internal ConcurrentQueue<(bool, NetEndPoint)> connectionResultQueue;
-        private ConcurrentQueue<(NetEndPoint, NetDisconnect)> disconnectionQueue;
+        private ConcurrentQueue<(NetEndPoint, NetDisconnect, bool)> disconnectionQueue;
         private ConcurrentQueue<NetEndPoint> beginReceiveQueue;
         private ConcurrentQueue<(NetEndPoint, NetPacket, PacketProtocol)> packetReceiveQueue;
+        private ConcurrentQueue<(NetEndPoint, NetPacket, PacketProtocol)> packetSendQueue;
         private ConcurrentQueue<SocketException> errorQueue;
 
         private CancellationTokenSource cancellationTokenSource;
@@ -97,9 +98,10 @@ namespace MonstroeNet
 
             connectionRequestQueue = new ConcurrentQueue<NetRequest>();
             connectionResultQueue = new ConcurrentQueue<(bool, NetEndPoint)>();
-            disconnectionQueue = new ConcurrentQueue<(NetEndPoint, NetDisconnect)>();
+            disconnectionQueue = new ConcurrentQueue<(NetEndPoint, NetDisconnect, bool)>();
             beginReceiveQueue = new ConcurrentQueue<NetEndPoint>();
             packetReceiveQueue = new ConcurrentQueue<(NetEndPoint, NetPacket, PacketProtocol)>();
+            packetSendQueue = new ConcurrentQueue<(NetEndPoint, NetPacket, PacketProtocol)>();
             errorQueue = new ConcurrentQueue<SocketException>();
 
             packetPool = ArrayPool<byte>.Shared;
@@ -200,13 +202,13 @@ namespace MonstroeNet
                             disconnect = new NetDisconnect(DisconnectCode.ConnectionRejected);
                         else
                             disconnect = new NetDisconnect(DisconnectCode.InvalidPacket);
-                        DisconnectForcefully(remoteEP, disconnect);
+                        Disconnect(remoteEP, disconnect, true);
                     }
                 }
                 catch (SocketException ex)
                 {
                     errorQueue.Enqueue(ex);
-                    DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
+                    Disconnect(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false);
                 }
             }
         }
@@ -271,7 +273,7 @@ namespace MonstroeNet
             }, cancellationTokenSource.Token);
         }
 
-        public async void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        public void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
         {
             if (packet.Length > (protocol == PacketProtocol.TCP ? TCP.MaxPacketSize : UDP.MaxPacketSize))
             {
@@ -279,10 +281,16 @@ namespace MonstroeNet
             }
 
             packet.InsertLength();
-            await SendPacket(remoteEP, packet, protocol);
+            packetSendQueue.Enqueue((remoteEP, packet, protocol));
+            //await SendPacket(remoteEP, packet, protocol);
         }
 
-        private async Task<bool> SendPacket(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        //private void SendPacket(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        //{
+        //
+        //}
+
+        private async Task<bool> SendPack(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
         {
             bool returnValue = false;
             ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
@@ -303,15 +311,51 @@ namespace MonstroeNet
             catch (SocketException ex)
             {
                 errorQueue.Enqueue(ex);
-                DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
+                //DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
+                Disconnect(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false);
             }
 
             return returnValue;
         }
 
-        public async void Disconnect(NetEndPoint remoteEP)
+        public void Disconnect(NetEndPoint remoteEP)
         {
-            await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely));
+            Disconnect(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely), true);
+            //disconnectionQueue.Enqueue((remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely), true));
+            //await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely));
+        }
+
+        private void Disconnect(NetEndPoint remoteEP, NetDisconnect disconnect, bool sendDisconnectPacketToRemote)
+        {
+            disconnectionQueue.Enqueue((remoteEP, disconnect, sendDisconnectPacketToRemote));
+        }
+
+        public void DisconnectForcefully(NetEndPoint remoteEP)
+        {
+            Disconnect(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedForcefully), false);
+            //disconnectionQueue.Enqueue((remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedForcefully), false));
+            //DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedForcefully));
+        }
+
+        private async Task<bool> DisconnectInternal(NetEndPoint remoteEP, NetDisconnect disconnect, bool sendDisconnectPacketToRemote)
+        {
+            bool returnValue = false;
+
+            if(sendDisconnectPacketToRemote)
+            {
+                using (NetPacket packet = new NetPacket())
+                {
+                    packet.Write((int)disconnect.DisconnectCode);
+                    returnValue = await SendPacket(remoteEP, packet, PacketProtocol.TCP);
+                }
+            }
+
+            if(!returnValue)
+            {
+                CloseRemoteEndpoint(remoteEP);
+            }
+
+            return returnValue;
         }
 
         //public async void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
@@ -319,17 +363,17 @@ namespace MonstroeNet
         //    await DisconnectSafely(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedSafely, disconnectPacket));
         //}
 
-        private async Task<bool> DisconnectSafely(NetEndPoint remoteEP, NetDisconnect? disconnect = null, DisconnectCode code = DisconnectCode.ConnectionClosedSafely)
+        /*private async Task<bool> DisconnectSafely(NetEndPoint remoteEP, NetDisconnect disconnect)
         {
             bool returnValue = false;
             using (NetPacket packet = new NetPacket())
             {
-                packet.Write((int)code);
+                packet.Write((int)disconnect.DisconnectCode);
                 if(await SendPacket(remoteEP, packet, PacketProtocol.TCP))
                 {
                     DisconnectForcefully(remoteEP, disconnect);
                 }
-                /*try
+                /ry
                 {
                     packet.Write((int)code);
                     ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
@@ -340,34 +384,38 @@ namespace MonstroeNet
                 {
                     errorQueue.Enqueue(ex);
                 }
-                DisconnectForcefully(remoteEP, disconnect);*/
+                DisconnectForcefully(remoteEP, disconnect);
             }
 
             return returnValue;
-        }
+        }*/
 
-        public void DisconnectForcefully(NetEndPoint remoteEP)
-        {
-            DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedForcefully));
-        }
-
-        private void DisconnectForcefully(NetEndPoint remoteEP, NetDisconnect? disconnect = null)
+        /*private void DisconnectForcefully(NetEndPoint remoteEP)//, NetDisconnect disconnect)
         {
             remoteEP.tcpSocket.Close();
             connections.Remove(remoteEP.EndPoint);
             //remoteEP.cancellationTokenSource.Cancel();
-            
-            if(disconnect != null)
-            {
-                disconnectionQueue.Enqueue((remoteEP, disconnect));
-            }
+
+            //if(disconnect != null)
+            //{
+            //    disconnectionQueue.Enqueue((remoteEP, disconnect));
+            //}
+
+            //OnDisconnected?.Invoke(remoteEP, disconnect);
+        }*/
+
+        private void CloseRemoteEndpoint(NetEndPoint remoteEP)
+        {
+            remoteEP.tcpSocket.Close();
+            connections.Remove(remoteEP.EndPoint);
         }
 
-        public async void Close()
+        public void Close()
         {
             foreach (var remoteEP in connections.Values)
             {
-                await DisconnectSafely(remoteEP);
+                //await DisconnectSafely(remoteEP);
+                Disconnect(remoteEP, new NetDisconnect(DisconnectCode.HostClosed), true);
             }
             cancellationTokenSource.Cancel();
 
@@ -407,7 +455,7 @@ namespace MonstroeNet
                 packet.Write((int)RequestStatus.Deny);
                 if(await SendPacket(remoteEP, packet, PacketProtocol.TCP))
                 {
-                    DisconnectForcefully(remoteEP, new NetDisconnect(DisconnectCode.ConnectionRejected));
+                    Disconnect(remoteEP, new NetDisconnect(DisconnectCode.ConnectionRejected), true);
                 }
             }
         }
@@ -420,9 +468,10 @@ namespace MonstroeNet
                 PollConnectionResult();
             }
 
-            PollDisconnection();
-            PollPacketsReceived();
             PollErrors();
+            PollPacketsSent();
+            PollPacketsReceived();
+            PollDisconnection();
         }
 
         private void PollConnectionRequest()
@@ -451,11 +500,20 @@ namespace MonstroeNet
             }
         }
 
-        private void PollDisconnection()
+        private async void PollDisconnection()
         {
             if(disconnectionQueue.TryDequeue(out var result))
             {
+                await DisconnectInternal(result.Item1, result.Item2, result.Item3);
                 OnDisconnected?.Invoke(result.Item1, result.Item2);
+            }
+        }
+
+        public async void PollPacketsSent()
+        {
+            if(packetSendQueue.TryDequeue(out var result))
+            {
+                await SendPacket(result.Item1, result.Item2, result.Item3);
             }
         }
 
@@ -509,7 +567,8 @@ namespace MonstroeNet
             {
                 errorQueue.Enqueue(ex);
                 //await DisconnectSafely(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), DisconnectCode.SocketError);
-                DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
+                //DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode));
+                Disconnect(netEndPoint, new NetDisconnect(DisconnectCode.SocketError), false);
             }
             catch (ObjectDisposedException) { Console.WriteLine("Object netEndPoint.tcpSocket disposed."); /* Catch this error when 'Close' is called */ }
 
@@ -701,7 +760,8 @@ namespace MonstroeNet
             int disconnectCode = finalPacket.ReadInt();
             bool containsCode = new List<int>((IEnumerable<int>)Enum.GetValues(typeof(DisconnectCode))).Contains(disconnectCode);
             if (containsCode)
-                DisconnectForcefully(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode));
+                Disconnect(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode), false);
+                //DisconnectForcefully(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode));
             else
                 DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket));
         }
