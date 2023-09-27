@@ -59,7 +59,8 @@ namespace MonstroeNet
 
         internal void InsertLength()
         {
-            byteList.InsertRange(0, ToProperEndian(BitConverter.GetBytes(byteList.Count)));
+            int length = byteList.Count;
+            byteList.InsertRange(0, ToProperEndian(BitConverter.GetBytes(length)));
         }
 
         public void Write(byte value)   { byteList.Add(value); }

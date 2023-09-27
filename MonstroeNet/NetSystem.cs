@@ -290,7 +290,7 @@ namespace MonstroeNet
         //
         //}
 
-        private async Task<bool> SendPack(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        private async Task<bool> SendPacket(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
         {
             bool returnValue = false;
             ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
@@ -763,7 +763,8 @@ namespace MonstroeNet
                 Disconnect(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode), false);
                 //DisconnectForcefully(netEndPoint, new NetDisconnect((DisconnectCode)disconnectCode));
             else
-                DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket));
+                Disconnect(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket), false);
+                //DisconnectForcefully(netEndPoint, new NetDisconnect(DisconnectCode.InvalidPacket));
         }
 
         private bool disposed = false;

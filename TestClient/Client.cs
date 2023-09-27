@@ -48,7 +48,7 @@ namespace TestClient
             while (true)
             {
                 client.Update();
-                Thread.Sleep(15);
+                //Thread.Sleep(15);
             }
         }
 

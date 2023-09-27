@@ -46,28 +46,26 @@ namespace UnitySampleReferrer
             while (true)
             {
                 listener.Update();
-                Thread.Sleep(15);
+                //Thread.Sleep(15);
             }
         }
 
         public void OnClientConnected(NetEndPoint remoteEndPoint)
         {
             Console.WriteLine("Client " + remoteEndPoint.EndPoint + " connected!");
-            using (NetPacket packet  = new NetPacket())
-            {
-                packet.Write("Hello Client!");
-                Console.WriteLine("Packet 1: " + packet.ReadString(false));
-                remoteEndPoint.Send(packet, PacketProtocol.TCP);
-            }
 
-            using (NetPacket packet2 = new NetPacket())
-            {
-                packet2.Write("Hello Client 2!");
-                Console.WriteLine("Packet 2: " + packet2.ReadString(false));
-                remoteEndPoint.Send(packet2, PacketProtocol.TCP);
-            }
+            NetPacket packet = new NetPacket();
+            packet.Write("Hello Client!");
+            Console.WriteLine("Packet 1: " + packet.ReadString(false));
+            remoteEndPoint.Send(packet, PacketProtocol.TCP);
+
+            NetPacket packet2 = new NetPacket();
+            packet2.Write("Hello Client 2!");
+            Console.WriteLine("Packet 2: " + packet2.ReadString(false));
+            remoteEndPoint.Send(packet2, PacketProtocol.TCP);
+
             //remoteEndPoint.Disconnect();
-            remoteEndPoint.DisconnectForcefully();
+            //remoteEndPoint.DisconnectForcefully();
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
