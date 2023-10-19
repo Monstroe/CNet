@@ -579,9 +579,9 @@ namespace MonstroeNet
 
         private async Task<(NetPacket, int, int, bool)> ReceiveTCPAsync(NetEndPoint netEndPoint, NetPacket receivedPacket, byte[] buffer, int offset, int size, bool ignoreExpectedLength = false)
         {
-            NetPacket finalPacket = new NetPacket();
+            NetPacket finalPacket = new List<NetPacket>();
             ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer, offset, size);
-            int packetOffset = 0;
+            //int packetOffset = 0;
             int expectedLength = 0;
             bool grabbedPacketLength = false;
             bool validPacket = false;
@@ -589,27 +589,11 @@ namespace MonstroeNet
 
             while (!cancellationTokenSource.IsCancellationRequested)
             {
-                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None);//, netEndPoint.cancellationTokenSource.Token);
-
-                //if(netEndPoint.cancellationTokenSource.IsCancellationRequested)
-                //{
-                //    break;
-                //}
-
-                // If a completely blank packet was sent
-                if (receivedBytes == 0)
-                {
-                    finalPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
-                    packetComplete = true;
-                }
-
-                var data = segBuffer.Slice(packetOffset, receivedBytes + segBuffer.Offset - packetOffset);
+                var data = new ArraySegment<byte>(buffer, 0, offset);
                 receivedPacket.Write(data.ToArray());
 
-                // If there are enough bytes to form an int
-                if (receivedPacket.Length >= 4 && !packetComplete)
+                if (receivedPacket.UnreadLength >= sizeof(int))
                 {
-                    // If we haven't already grabbed the packet length
                     if (!grabbedPacketLength)
                     {
                         expectedLength = receivedPacket.ReadInt();
@@ -620,23 +604,103 @@ namespace MonstroeNet
                     // Connection status packets have an expected length of less than 0, so just return the final packet so it can be acted upon later
                     if (expectedLength < 0)
                         finalPacket.Write(expectedLength);
-                    // If the expected length of the packet is greater than the set TCP buffer size
                     else if (expectedLength > TCP.BufferSize)
                         finalPacket.Write((int)DisconnectCode.PacketOverBufferSize);
-                    // If the expected length of the packet is greater than the set max packet size
                     else if (expectedLength > TCP.MaxPacketSize)
                         finalPacket.Write((int)DisconnectCode.PacketOverMaxSize);
-                    // If the expected length of the packet is less than the set min packet size
-                    //else if (expectedLength < TCP.MinPacketSize)
-                    //    finalPacket.Write((int)DisconnectCode.PacketUnderMinSize);
                     // If all the bytes in the packet have been received
                     else if (expectedLength <= receivedPacket.UnreadLength || ignoreExpectedLength)
                     {
-                        finalPacket.Write(receivedPacket.ReadBytes(ignoreExpectedLength ? 4 : expectedLength));
+                        finalPacket.Write(receivedPacket.ReadBytes(ignoreExpectedLength ? sizeof(int) : expectedLength));
                         validPacket = true;
                     }
                     else
                         packetComplete = false;
+                }
+
+                // If the final packet has been built
+                if (packetComplete)
+                {
+                    break;
+                }
+
+                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None);
+                offset += receivedBytes;
+
+                // If a completely blank packet was sent
+                if (receivedBytes == 0)
+                {
+                    finalPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
+                    packetComplete = true;
+                }
+            }
+
+            Buffer.BlockCopy(buffer, receivedPacket.CurrentIndex, buffer, 0, receivedPacket.UnreadLength);
+        }
+
+        private async Task<(List<NetPacket>, int, int, bool)> ReceiveTCPAsync(NetEndPoint netEndPoint, NetPacket receivedPacket, byte[] buffer, int offset, int size, bool ignoreExpectedLength = false)
+        {
+            List<NetPacket> finalPackets = new List<NetPacket>();
+            ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer, offset, size);
+            //int packetOffset = 0;
+            int expectedLength = 0;
+            bool grabbedPacketLength = false;
+            bool validPacket = false;
+            bool packetComplete = false;
+
+            while (!cancellationTokenSource.IsCancellationRequested)
+            {
+                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None);
+
+                // If a completely blank packet was sent
+                if (receivedBytes == 0)
+                {
+                    NetPacket emptyPacket = new NetPacket();
+                    emptyPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
+                    finalPackets.Add(emptyPacket);
+                    packetComplete = true;
+                }
+
+                //var data = segBuffer.Slice(packetOffset, receivedBytes + segBuffer.Offset - packetOffset);
+                var data = new ArraySegment<byte>(buffer, 0, receivedBytes + segBuffer.Offset);
+                receivedPacket.Write(data.ToArray());
+
+                // If there are enough bytes to form an int
+                if (receivedPacket.Length >= 4 && !packetComplete)
+                {
+                    while(true)
+                    {
+                        // If we haven't already grabbed the packet length
+                        if (!grabbedPacketLength)
+                        {
+                            expectedLength = receivedPacket.ReadInt();
+                            grabbedPacketLength = true;
+                        }
+
+                        NetPacket finalPacket = new NetPacket();
+                        packetComplete = true;
+                        // Connection status packets have an expected length of less than 0, so just return the final packet so it can be acted upon later
+                        if (expectedLength < 0)
+                            finalPacket.Write(expectedLength);
+                        // If the expected length of the packet is greater than the set TCP buffer size
+                        else if (expectedLength > TCP.BufferSize)
+                            finalPacket.Write((int)DisconnectCode.PacketOverBufferSize);
+                        // If the expected length of the packet is greater than the set max packet size
+                        else if (expectedLength > TCP.MaxPacketSize)
+                            finalPacket.Write((int)DisconnectCode.PacketOverMaxSize);
+                        // If all the bytes in the packet have been received
+                        else if (expectedLength <= receivedPacket.UnreadLength || ignoreExpectedLength)
+                        {
+                            finalPacket.Write(receivedPacket.ReadBytes(ignoreExpectedLength ? 4 : expectedLength));
+                            validPacket = true;
+                            break;
+                        }
+                        else
+                        {
+                            packetComplete = false;
+                            break;
+                        }
+                    }
                 }
 
                 // If the final packet has been built
@@ -647,7 +711,7 @@ namespace MonstroeNet
                 }
 
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
-                packetOffset = segBuffer.Offset;
+                //packetOffset = segBuffer.Offset;
             }
 
             Buffer.BlockCopy(buffer, segBuffer.Offset, buffer, 0, segBuffer.Count);
