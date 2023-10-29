@@ -18,6 +18,5 @@ namespace MonstroeNet
         void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol);
 
         void OnNetworkError(SocketException socketException);
-
     }
 }

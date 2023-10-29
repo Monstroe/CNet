@@ -48,7 +48,7 @@ namespace TestClient
             while (true)
             {
                 client.Update();
-                //Thread.Sleep(15);
+                Thread.Sleep(15);
             }
         }
 
@@ -64,18 +64,19 @@ namespace TestClient
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Received: " + packet.ReadString());// + ", float: " + packet.ReadFloat());
+            Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + packet.ReadString());
         }
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
+            //Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
+            Console.WriteLine("Error: " + socketException.ToString());
         }
 
         // Main Method
         static void Main(string[] args)
         {
-            Client.Instance.Start("127.0.0.1", 7777);
+            Client.Instance.Start("127.0.0.1", 7778);
         }
     }
 }

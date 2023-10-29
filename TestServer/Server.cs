@@ -23,7 +23,6 @@ namespace TestServer
 
             NetSystem system = new NetSystem(Port);
             system.RegisterInterface(this);
-            system.Start();
             system.Listen();
 
             Console.WriteLine("Server initialized and is listening for connections...");
@@ -31,33 +30,41 @@ namespace TestServer
             while (true)
             {
                 system.Update();
+                Thread.Sleep(15);
             }
         }
 
         public void OnConnectionRequest(NetRequest request)
         {
             Console.WriteLine("Connection Request");
-            request.Deny();
+            request.Accept();
         }
 
         public void OnClientConnected(NetEndPoint remoteEndPoint)
         {
             Console.WriteLine("Client Connected");
+            NetPacket packet = new NetPacket();
+            packet.Write("Hello World!");
+            remoteEndPoint.Send(packet, PacketProtocol.TCP);
+            NetPacket packet2 = new NetPacket();
+            packet2.Write("Goodbye"!);
+            remoteEndPoint.Disconnect();
         }
 
-        public void OnClientDisconnected()
+        public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
-            Console.WriteLine("Connection Disconnected");
+            Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint + ": " + disconnect.DisconnectCode.ToString());
         }
 
-        public void OnPacketReceive(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
+        public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
-            Console.WriteLine("Packet Receive");
+            throw new NotImplementedException();
         }
 
         public void OnNetworkError(SocketException socketException)
         {
-            Console.WriteLine("Network Error: " + socketException.Message);
+            //Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
+            Console.WriteLine("Network Error: " + socketException.ToString());
         }
     }
 }

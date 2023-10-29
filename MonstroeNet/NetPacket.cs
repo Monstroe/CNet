@@ -317,6 +317,7 @@ namespace MonstroeNet
                 int strLen = ReadInt(false);
                 //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex + 4, strLen);
                 //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex, strLen);
+                //Console.WriteLine("String data: " + "Curr Index: " + CurrentIndex + ", strLen: " + strLen);
                 var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex + 4, strLen).ToArray());
                 //CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
                 CurrentIndex += moveIndexPosition ? strLen + 4 : 0;

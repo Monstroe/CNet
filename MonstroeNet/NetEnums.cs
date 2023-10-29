@@ -20,14 +20,13 @@ namespace MonstroeNet
 
     public enum DisconnectCode
     {
-        ConnectionClosedSafely = -1,
-        ConnectionClosedForcefully = -2,
+        ConnectionClosed = -1,
+        ConnectionClosedForcefully = -8,
+        ConnectionClosedWithMessage = -2,
         ConnectionRejected = -3,
         PacketOverBufferSize = -4,
         PacketOverMaxSize = -5,
-        //PacketUnderMinSize = -6,
-        HostClosed = -6,
-        InvalidPacket = -7,
-        SocketError = -8,
+        InvalidPacket = -6,
+        SocketError = -7,
     }
 }

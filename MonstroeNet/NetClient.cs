@@ -59,19 +59,21 @@ namespace MonstroeNet
         public void Disconnect()
         {
             system.Disconnect(RemoteEndPoint);
-            system.Close();
         }
 
-        //public void Disconnect(NetPacket disconnectPacket)
-        //{
-        //    system.Disconnect(RemoteEndPoint, disconnectPacket);
-        //    system.Close();
-        //}
+        public void Disconnect(NetPacket disconnectPacket)
+        {
+            system.Disconnect(RemoteEndPoint, disconnectPacket);
+        }
 
         public void DisconnectForcefully()
         {
             system.DisconnectForcefully(RemoteEndPoint);
-            system.Close();
+        }
+
+        public void Close(bool sendDisconnectPacketToRemote) 
+        {
+            system.Close(sendDisconnectPacketToRemote);
         }
 
         private bool disposed = false;
