@@ -53,8 +53,14 @@ namespace MonstroeNet
 
         public void Clear()
         {
-            CurrentIndex = 0;
             byteList.Clear();
+            CurrentIndex = 0;
+        }
+
+        public void Remove(int offset, int count)
+        {
+            byteList.RemoveRange(offset, count);
+            CurrentIndex = CurrentIndex > offset ? CurrentIndex - count : CurrentIndex;
         }
 
         internal void InsertLength()
@@ -317,7 +323,6 @@ namespace MonstroeNet
                 int strLen = ReadInt(false);
                 //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex + 4, strLen);
                 //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex, strLen);
-                //Console.WriteLine("String data: " + "Curr Index: " + CurrentIndex + ", strLen: " + strLen);
                 var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex + 4, strLen).ToArray());
                 //CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
                 CurrentIndex += moveIndexPosition ? strLen + 4 : 0;

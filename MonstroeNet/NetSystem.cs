@@ -417,7 +417,7 @@ namespace MonstroeNet
 
         private void CloseRemote(NetEndPoint remoteEP, bool sendZeroBytePacket)
         {
-            Task.Delay(10000);
+            //Task.Delay(10000);
             //remoteEP.tcpSocket.Shutdown(SocketShutdown.Both);
             remoteEP.cancellationTokenSource.Cancel();
             if(sendZeroBytePacket) 
@@ -435,7 +435,7 @@ namespace MonstroeNet
             using (NetPacket packet = new NetPacket())
             {
                 packet.Write((int)RequestStatus.Accept);
-                packet.Write((int)RequestStatus.Accept);
+                //packet.Write((int)RequestStatus.Accept);
                 await SendInternal(remoteEP, packet, PacketProtocol.TCP);
             }
         }
@@ -445,7 +445,7 @@ namespace MonstroeNet
             using (NetPacket packet = new NetPacket())
             {
                 packet.Write((int)RequestStatus.Deny);
-                packet.Write((int)RequestStatus.Deny);
+                //packet.Write((int)RequestStatus.Deny);
                 await SendInternal(remoteEP, packet, PacketProtocol.TCP, false);
                 await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.ConnectionRejected), false);
             }
@@ -545,7 +545,8 @@ namespace MonstroeNet
                         break;
                     }
 
-                    receivedPacket.Clear();
+                    //receivedPacket.Clear();
+                    receivedPacket.Remove(0, offset);
                     packetReceiveQueue.Enqueue((netEndPoint, finalPacket, PacketProtocol.TCP));
                 }
             }
@@ -565,32 +566,18 @@ namespace MonstroeNet
         {
             NetPacket finalPacket = new NetPacket();
             ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer, offset, size);
-            int packetOffset = 0;
+            //int packetOffset = 0;
             int expectedLength = 0;
             bool grabbedPacketLength = false;
-            bool validPacket = true;
+            bool validPacket = false;
 
             while (!cancellationTokenSource.IsCancellationRequested)
             {
-                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None, netEndPoint.cancellationTokenSource.Token);
-
-                // If a completely blank packet was sent
-                if (receivedBytes == 0)
-                {
-                    //finalPacket.Write((int)DisconnectCode.ConnectionClosed);
-                    finalPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
-                    validPacket = false;
-                    break;
-                }
-
-                var data = segBuffer.Slice(packetOffset, receivedBytes + segBuffer.Offset - packetOffset);
-                receivedPacket.Write(data.ToArray());
-
                 // If there are enough bytes to form an int
                 if (receivedPacket.Length >= 4)
                 {
                     // If we haven't already grabbed the packet length
-                    if (!grabbedPacketLength)
+                    if (!grabbedPacketLength && !ignoreExpectedLength)
                     {
                         expectedLength = receivedPacket.ReadInt();
 
@@ -598,24 +585,20 @@ namespace MonstroeNet
                         if (expectedLength < 0)
                         {
                             finalPacket.Write(expectedLength);
-                            validPacket = false;
                             if (expectedLength == (int)DisconnectCode.ConnectionClosedWithMessage)
                                 expectedLength = receivedPacket.ReadInt();
                             else break;
-                            break;
                         }
                         // If the expected length of the packet is greater than the set TCP buffer size
                         else if (expectedLength > TCP.BufferSize)
                         {
                             finalPacket.Write((int)DisconnectCode.PacketOverBufferSize);
-                            validPacket = false;
                             break;
                         }
                         // If the expected length of the packet is greater than the set max packet size
                         else if (expectedLength > TCP.MaxPacketSize)
                         {
                             finalPacket.Write((int)DisconnectCode.PacketOverMaxSize);
-                            validPacket = false;
                             break;
                         }
 
@@ -626,13 +609,29 @@ namespace MonstroeNet
                     if (expectedLength <= receivedPacket.UnreadLength || ignoreExpectedLength)
                     {
                         finalPacket.Write(receivedPacket.ReadBytes(ignoreExpectedLength ? 4 : expectedLength));
-                        segBuffer = segBuffer.Slice(segBuffer.Offset + finalPacket.Length, receivedPacket.UnreadLength);
+                        //segBuffer = segBuffer.Slice(segBuffer.Offset + finalPacket.Length, receivedPacket.UnreadLength);
+                        segBuffer = segBuffer.Slice(segBuffer.Offset, finalPacket.Length);
+                        validPacket = true;
                         break;
                     }
                 }
 
+                // If there are no more bytes already in receivedPacket, receive more
+                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None, netEndPoint.cancellationTokenSource.Token);
+
+                // If a completely blank packet was sent
+                if (receivedBytes == 0)
+                {
+                    finalPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
+                    break;
+                }
+
+                //var data = segBuffer.Slice(packetOffset, receivedBytes + segBuffer.Offset - packetOffset);
+                //receivedPacket.Write(data.ToArray());
+
+                receivedPacket.Write(segBuffer.Slice(segBuffer.Offset, receivedBytes).ToArray());
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
-                packetOffset = segBuffer.Offset;
+                //packetOffset = segBuffer.Offset;
             }
 
             if (validPacket)
@@ -739,7 +738,17 @@ namespace MonstroeNet
         private void ProcessStatusPacket(NetPacket finalPacket, NetEndPoint netEndPoint)
         {
             int disconnectCode = finalPacket.ReadInt();
-            bool containsCode = new List<int>((IEnumerable<int>)Enum.GetValues(typeof(DisconnectCode))).Contains(disconnectCode);
+            //bool containsCode = new List<int>((IEnumerable<int>)Enum.GetValues(typeof(DisconnectCode))).Contains(disconnectCode);
+            bool containsCode = false;
+            foreach(int code in Enum.GetValues(typeof(DisconnectCode)))
+            {
+                if (code == disconnectCode)
+                {
+                    containsCode = true;
+                    break;
+                }
+            }
+            
             NetDisconnect disconnect;
             if (containsCode)
             {

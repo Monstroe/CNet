@@ -48,6 +48,7 @@ namespace TestServer
             remoteEndPoint.Send(packet, PacketProtocol.TCP);
             NetPacket packet2 = new NetPacket();
             packet2.Write("Goodbye"!);
+            remoteEndPoint.Send(packet2, PacketProtocol.TCP);
             remoteEndPoint.Disconnect();
         }
 
