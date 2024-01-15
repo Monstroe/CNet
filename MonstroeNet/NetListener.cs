@@ -23,6 +23,8 @@ namespace MonstroeNet
 
         public List<NetEndPoint> RemoteEndPoints { get { return system.RemoteEndPoints; } }
 
+        public List<NetEndPoint> RemoteUDPEndPoints { get { return system.RemoteUDPEndPoints; } }
+
         public NetListener()
         {
             system = new NetSystem();

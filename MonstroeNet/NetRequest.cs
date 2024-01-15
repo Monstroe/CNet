@@ -35,12 +35,11 @@ namespace MonstroeNet
         {
             if(clientAccepted || clientDenied)
             {
-                // Throw already called error
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Accept() or Deny() has already been called.");
             }
 
             clientAccepted = true;
-            netSystem.connectionResultQueue.Enqueue((true, clientEP));
+            netSystem.HandleConnectionResultOnMainThread(true, clientEP);
             return clientEP;
         }
 
@@ -48,18 +47,11 @@ namespace MonstroeNet
         {
             if (clientAccepted || clientDenied)
             {
-                // Throw already called error
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Accept() or Deny() has already been called.");
             }
 
             clientDenied = true;
-            netSystem.connectionResultQueue.Enqueue((false, clientEP));
-
-            /*if (!clientDenied && !clientAccepted)
-            {
-                clientEndPoint.tcpSocket?.Close();
-            }
-            clientDenied = true;*/
+            netSystem.HandleConnectionResultOnMainThread(false, clientEP);
         }
     }
 }

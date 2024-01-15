@@ -24,6 +24,8 @@ namespace MonstroeNet
             set { system.Port = value; }
         }
 
+        public bool IsConnected { get { return system.IsConnected; } }
+
         public NetEndPoint RemoteEndPoint { get { return system.RemoteEndPoint; } }
 
         public NetClient()

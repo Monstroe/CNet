@@ -27,7 +27,7 @@ namespace MonstroeNet
         }
 
         internal Socket tcpSocket;
-        internal NetPacket receivedPacket;
+        internal IPEndPoint udpEndPoint;
         internal CancellationTokenSource cancellationTokenSource;
         private NetSystem netSystem;
 
@@ -41,7 +41,6 @@ namespace MonstroeNet
         {
             EndPoint = ipEndPoint;
             this.tcpSocket = tcpSocket;
-            receivedPacket = new NetPacket();
         }
 
         public void Send(NetPacket packet, PacketProtocol protocol)
