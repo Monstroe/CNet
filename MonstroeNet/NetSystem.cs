@@ -79,7 +79,7 @@ namespace MonstroeNet
             get { return connectionsUDP.Values.ToList(); }
         }
 
-        private const int UDPPortReceiveCode = -100;
+        //private const int UDPPortReceiveCode = -100;
 
         private Dictionary<IPEndPoint, NetEndPoint> connectionsTCP;
         private Dictionary<IPEndPoint, NetEndPoint> connectionsUDP;
@@ -193,9 +193,9 @@ namespace MonstroeNet
                         bool sentUDPPort = false;
                         using (NetPacket udpDataPacket = new NetPacket())
                         {
-                            udpDataPacket.Write(UDPPortReceiveCode);
+                            //udpDataPacket.Write(UDPPortReceiveCode);
                             udpDataPacket.Write(((IPEndPoint)udpSocket.LocalEndPoint).Port);
-                            udpDataPacket.InsertLength(4);
+                            //udpDataPacket.InsertLength(4);
                             sentUDPPort = await SendInternal(remoteEP, udpDataPacket, PacketProtocol.TCP);
                         }
 
@@ -217,7 +217,9 @@ namespace MonstroeNet
                         if (receivedPacket.ReadInt(false) == (int)RequestStatus.Deny)
                             disconnect = new NetDisconnect(DisconnectCode.ConnectionRejected);
                         else
+                        {
                             disconnect = new NetDisconnect(DisconnectCode.InvalidPacket);
+                        }
                         DisconnectOnMainThread(remoteEP, disconnect, false);
                     }
                 }
@@ -289,8 +291,23 @@ namespace MonstroeNet
                 connectionsTCP.Add(remoteEP.EndPoint, remoteEP);
                 if (result)
                 {
-                    beginReceiveQueue.Enqueue(remoteEP);
                     await SendRequestAccept(remoteEP);
+                    NetPacket udpPortData = await ReceiveTCPAsync(remoteEP, true);
+                    try
+                    {
+                        int port = udpPortData.ReadInt();
+                        IPEndPoint endPoint = new IPEndPoint(remoteEP.EndPoint.Address, port);
+                        NetEndPoint udpEndPoint = new NetEndPoint(endPoint, remoteEP.tcpSocket, this);
+                        remoteEP.udpEndPoint = endPoint;
+                        udpEndPoint.udpEndPoint = endPoint;
+                        connectionsUDP.Add(udpEndPoint.EndPoint, udpEndPoint);
+                    }
+                    catch (IndexOutOfRangeException ex)
+                    {
+                        await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.InvalidPacket), false);
+                    }
+
+                    beginReceiveQueue.Enqueue(remoteEP);
                     OnConnected?.Invoke(remoteEP);
                 }
                 else
@@ -324,13 +341,29 @@ namespace MonstroeNet
 
             packet.InsertLength();
 
-            ThreadManager.ExecuteOnMainThread(async () => await SendInternal(remoteEP, packet, protocol));
+            byte[] packetBytes = packet.ByteArray;
+            ThreadManager.ExecuteOnMainThread(async () => await SendInternal(remoteEP, packetBytes, protocol));
         }
 
         private async Task<bool> SendInternal(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol, bool disconnectOnError = true)
         {
+            byte[] packetBytes = packet.ByteArray;
+            return await SendInternal(remoteEP, packetBytes, protocol, disconnectOnError);
+        }
+
+        private async Task<bool> SendInternal(NetEndPoint remoteEP, byte[] packetBytes, PacketProtocol protocol, bool disconnectOnError = true)
+        {
+            try
+            {
+                if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                {
+                    return false;
+                }
+            }
+            catch (ObjectDisposedException) { return false; }
+
             bool returnValue = false;
-            ArraySegment<byte> segBuffer = new ArraySegment<byte>(packet.ByteArray);
+            ArraySegment<byte> segBuffer = new ArraySegment<byte>(packetBytes);
 
             try
             {
@@ -340,7 +373,7 @@ namespace MonstroeNet
                 }
                 else
                 {
-                    if(remoteEP.udpEndPoint != null)
+                    if (remoteEP.udpEndPoint != null)
                     {
                         await udpSocket.SendToAsync(segBuffer, SocketFlags.None, remoteEP.udpEndPoint);
                     }
@@ -356,7 +389,6 @@ namespace MonstroeNet
                     await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false);
                 }
             }
-            catch (ObjectDisposedException) { /* Catch this error when 'CloseRemote' is called */ }
 
             return returnValue;
         }
@@ -368,7 +400,7 @@ namespace MonstroeNet
 
         public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
         {
-            DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedWithMessage, disconnectPacket), true);
+            DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedWithMessage, disconnectPacket.ByteArray), true);
         }
 
         public async void DisconnectForcefully(NetEndPoint remoteEP)
@@ -384,6 +416,15 @@ namespace MonstroeNet
         private async Task<bool> DisconnectInternal(NetEndPoint remoteEP, NetDisconnect disconnect, bool sendDisconnectPacketToRemote)
         {
             bool returnValue = true;
+
+            try
+            {
+                if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                {
+                    return false;
+                }
+            }
+            catch (ObjectDisposedException) { return false; }
 
             if (sendDisconnectPacketToRemote)
             {
@@ -422,10 +463,7 @@ namespace MonstroeNet
             remoteEP.tcpSocket.Shutdown(SocketShutdown.Both);
             remoteEP.tcpSocket.Close();
             connectionsTCP.Remove(remoteEP.EndPoint);
-            if(remoteEP.udpEndPoint != null) 
-            {
-                connectionsUDP.Remove(remoteEP.udpEndPoint);
-            }
+            connectionsUDP.Remove(remoteEP.udpEndPoint);
         }
 
         private async Task SendRequestAccept(NetEndPoint remoteEP)
@@ -442,8 +480,8 @@ namespace MonstroeNet
             using (NetPacket packet = new NetPacket())
             {
                 packet.Write((int)RequestStatus.Deny);
-                //await SendInternal(remoteEP, packet, PacketProtocol.TCP, false);
-                await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.ConnectionRejected), true);
+                await SendInternal(remoteEP, packet, PacketProtocol.TCP, false);
+                await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.ConnectionRejected), false);
             }
         }
 
@@ -479,12 +517,12 @@ namespace MonstroeNet
                     {
                         bool breakLoop = await ProcessStatusPacket(finalPacket, netEndPoint, receivedPacket);
 
-                        if(breakLoop)
+                        if (breakLoop)
                             break;
                     }
                     receivedPacket.Remove(0, receivedPacket.CurrentIndex);
 
-                    if(validPacket) 
+                    if (validPacket)
                     {
                         ReceivePacketOnMainThread(netEndPoint, finalPacket, PacketProtocol.TCP);
                     }
@@ -522,32 +560,7 @@ namespace MonstroeNet
                         // Connection status packets have an expected length of less than 0, so just return the final packet so it can be acted upon later
                         if (expectedLength < 0)
                         {
-                            // If this is a recursive call, break out of the loop. We don't multiple levels of recursion
-                            /*if (inRecursiveCall)
-                            {
-                                finalPacket.Write((int)DisconnectCode.InvalidPacket);
-                                break;
-                            }*/
-
                             finalPacket.Write(expectedLength);
-
-                            /*if (expectedLength == UDPPortReceiveCode || expectedLength == (int)DisconnectCode.ConnectionClosedWithMessage)
-                            {
-                                // Receive the rest of the packet in a recursive call
-                                //Console.WriteLine("Begin receiving TCP data RECURSIVE for " + netEndPoint.EndPoint.ToString());
-                                var receivedData = await ReceiveTCPAsync(netEndPoint, receivedPacket, buffer, offset, size, false, true);
-                                // If the packet is valid, write the rest of the data to the final packet, otherwise just write the invalid packet code
-                                if (receivedData.Item4)
-                                {
-                                    finalPacket.Write(receivedData.Item1.ReadBytes(receivedData.Item1.UnreadLength));
-                                }
-                                else
-                                {
-                                    finalPacket.Clear();
-                                    finalPacket.Write(receivedData.Item1.ReadInt());
-                                }
-                            }*/
-
                             break;
                         }
                         // If the expected length of the packet is greater than the set TCP buffer size
@@ -589,11 +602,7 @@ namespace MonstroeNet
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
             }
 
-            //if (!inRecursiveCall)
-            //{
             Buffer.BlockCopy(buffer, receivedPacket.CurrentIndex, buffer, 0, receivedPacket.UnreadLength);
-            //}
-
             return (finalPacket, validPacket);
         }
 
@@ -632,12 +641,12 @@ namespace MonstroeNet
                 }
                 catch (SocketException ex)
                 {
-                    if (ex.SocketErrorCode != SocketError.OperationAborted)
+                    if(ex.SocketErrorCode != SocketError.OperationAborted) 
                     {
                         ThrowErrorOnMainThread(ex);
                     }
                 }
-                catch (OperationCanceledException) { /* Catch this error when the cancellation token was canceled */ }
+                //catch (OperationCanceledException) { /* Catch this error when the cancellation token was canceled */ }
                 //catch (ObjectDisposedException) { /* Catch this error when 'Close' is called */ }
             }
 
@@ -706,28 +715,8 @@ namespace MonstroeNet
         private async Task<bool> ProcessStatusPacket(NetPacket finalPacket, NetEndPoint netEndPoint, NetPacket receivedPacket = null)
         {
             int code = finalPacket.ReadInt();
-
-            if (code == UDPPortReceiveCode)
-            {
-                if (netEndPoint.udpEndPoint == null && receivedPacket != null)
-                {
-                    NetPacket finalData = await ReceiveTCPAsync(netEndPoint, receivedPacket);
-                    int port = finalData.ReadInt();
-                    IPEndPoint endPoint = new IPEndPoint(netEndPoint.EndPoint.Address, port);
-
-                    NetEndPoint udpEndPoint = new NetEndPoint(endPoint, netEndPoint.tcpSocket, this);
-                    netEndPoint.udpEndPoint = endPoint;
-                    udpEndPoint.udpEndPoint = endPoint;
-                    connectionsUDP.Add(udpEndPoint.EndPoint, udpEndPoint);
-                    return false;
-                }
-                else
-                {
-                    code = (int)DisconnectCode.InvalidPacket;
-                }
-            }
-
             bool containsDisconnectCode = false;
+
             foreach (int c in Enum.GetValues(typeof(DisconnectCode)))
             {
                 if (c == code)
@@ -740,13 +729,15 @@ namespace MonstroeNet
             NetDisconnect disconnect;
             if (containsDisconnectCode)
             {
-                if(code == (int)DisconnectCode.ConnectionClosedWithMessage && receivedPacket != null)
+                if (code == (int)DisconnectCode.ConnectionClosedWithMessage && receivedPacket != null)
                 {
                     NetPacket finalData = await ReceiveTCPAsync(netEndPoint, receivedPacket);
                     disconnect = new NetDisconnect((DisconnectCode)code, finalData);
                 }
-
-                disconnect = new NetDisconnect((DisconnectCode)code);
+                else
+                {
+                    disconnect = new NetDisconnect((DisconnectCode)code);
+                }
             }
             else
             {
@@ -763,8 +754,6 @@ namespace MonstroeNet
 
             if (clearUnmanaged)
             {
-                //tcpSocket.Shutdown(SocketShutdown.Both);
-                //udpSocket.Shutdown(SocketShutdown.Both);
                 tcpSocket.Close();
                 udpSocket.Close();
                 cancellationTokenSource.Dispose();
@@ -792,6 +781,7 @@ namespace MonstroeNet
                 {
                     Reset(false);
                     connectionsTCP = null;
+                    connectionsUDP = null;
                     beginReceiveQueue = null;
                     systemConnected = false;
                 }

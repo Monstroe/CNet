@@ -36,6 +36,11 @@ namespace MonstroeNet
             disconnectData = data;
         }
 
+        internal NetDisconnect(DisconnectCode reason, byte[] dataBytes) : this(reason)
+        {
+            disconnectData = new NetPacket(dataBytes);
+        }
+
         internal NetDisconnect(DisconnectCode reason, SocketError error) : this(reason)
         {
             socketError = error;

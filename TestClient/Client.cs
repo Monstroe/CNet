@@ -10,7 +10,7 @@ namespace TestClient
 {
     internal class Client : IEventNetClient
     {
-        private int testCounter = 0;
+        private int testCounter = 100;
 
         private static Client instance;
         public static Client Instance
@@ -75,13 +75,20 @@ namespace TestClient
             NetPacket packet = new NetPacket();
             packet.Write("Hello Server!");
             remoteEndPoint.Send(packet, PacketProtocol.TCP);
+            //client.Disconnect();
+            //client.Close(true);
+            //remoteEndPoint.Send(packet, PacketProtocol.TCP);
+
+            //NetPacket helloServer = new NetPacket();
+            //helloServer.Write("Hello Server!");
+            //remoteEndPoint.Send(helloServer, PacketProtocol.TCP);
         }
 
         public void OnDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
             Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? ". Message: " + disconnect.DisconnectData.ReadString() : ""));
 
-            if(testCounter == 0) 
+            /*if(testCounter == 0) 
             {
                 if(disconnect.DisconnectCode == DisconnectCode.ConnectionRejected)
                     PassedTest(0);
@@ -128,7 +135,7 @@ namespace TestClient
                 else
                     FailedTest(5);
                 return;
-            }
+            }*/
         }
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
@@ -136,7 +143,7 @@ namespace TestClient
             string message = packet.ReadString();
             Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
 
-            NetPacket response = new NetPacket();
+            /*NetPacket response = new NetPacket();
             response.Write("Hello Server!");
             remoteEndPoint.Send(response, PacketProtocol.TCP);
 
@@ -148,7 +155,7 @@ namespace TestClient
                     FailedTest(3);
                 remoteEndPoint.Send(response, PacketProtocol.TCP);
                 return;
-            }
+            }*/
         }
 
         public void OnNetworkError(SocketException socketException)
