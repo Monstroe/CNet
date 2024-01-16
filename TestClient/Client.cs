@@ -89,17 +89,26 @@ namespace TestClient
             Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? ". Message: " + disconnect.DisconnectData.ReadString() : ""));
         }
 
+        int udpRecvCounter = 1;
+
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
             string message = packet.ReadString();
             if (protocol == PacketProtocol.UDP)
+            {
                 message += packet.ReadInt(false);
-
-            Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
-
-            NetPacket responsePacket = new NetPacket();
-            responsePacket.Write("TCP Packet Response");
-            remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
+                int counter = packet.ReadInt(false);
+                if (counter != udpRecvCounter)
+                    Console.WriteLine("UDP Packet Loss: " + (counter - udpRecvCounter) + " packets");
+                udpRecvCounter = counter + 1;
+            }
+            else
+            {
+                Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
+                NetPacket responsePacket = new NetPacket();
+                responsePacket.Write("TCP Packet Response");
+                //remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
+            }
         }
 
         public void OnNetworkError(SocketException socketException)

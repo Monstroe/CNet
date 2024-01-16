@@ -193,9 +193,7 @@ namespace MonstroeNet
                         bool sentUDPPort = false;
                         using (NetPacket udpDataPacket = new NetPacket())
                         {
-                            //udpDataPacket.Write(UDPPortReceiveCode);
                             udpDataPacket.Write(((IPEndPoint)udpSocket.LocalEndPoint).Port);
-                            //udpDataPacket.InsertLength(4);
                             sentUDPPort = await SendInternal(remoteEP, udpDataPacket, PacketProtocol.TCP);
                         }
 
