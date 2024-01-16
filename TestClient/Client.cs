@@ -53,7 +53,7 @@ namespace TestClient
             while (true)
             {
                 client.Update();
-                Thread.Sleep(15);
+                Thread.Sleep(100);
                 counter = UDPPacketLoop(counter);
             }
         }

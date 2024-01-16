@@ -47,7 +47,7 @@ namespace TestServer
             while (true)
             {
                 listener.Update();
-                Thread.Sleep(15);
+                Thread.Sleep(100);
                 counter = UDPPacketLoop(counter);
             }
         }
