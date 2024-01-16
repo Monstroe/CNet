@@ -168,6 +168,8 @@ namespace TestServer
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
             string message = packet.ReadString();
+            if(protocol == PacketProtocol.UDP)
+                message += packet.ReadInt();
             Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
 
            /* NetPacket goodbye = new NetPacket();
