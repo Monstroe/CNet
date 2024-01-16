@@ -167,7 +167,7 @@ namespace TestClient
         // Main Method
         static void Main(string[] args)
         {
-            Client.Instance.Start("127.0.0.1", 7777);
+            Client.Instance.Start("165.227.90.160", 7777);
         }
 
         private void PassedTest(int testNumber) 

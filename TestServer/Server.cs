@@ -82,7 +82,7 @@ namespace TestServer
                 hello.Clear();
                 //listener.Dispose();
                 //listener.Close(true);
-                remoteEndPoint.DisconnectForcefully();
+                //remoteEndPoint.DisconnectForcefully();
                 //hello.Write("Disconnecting from Client!");
                 //NetPacket goodbye = new NetPacket();
                 //goodbye.Write("Goodbye!");
