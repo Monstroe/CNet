@@ -74,28 +74,27 @@ namespace MonstroeNet
             byteList.InsertRange(offset, ToProperEndian(BitConverter.GetBytes(length)));
         }
 
-        public void Write(byte value)   { byteList.Add(value); }
+        public void Write(byte value) { byteList.Add(value); }
         public void Write(byte[] value) { byteList.AddRange(value); }
-        public void Write(bool value)   { byteList.AddRange(BitConverter.GetBytes(value)); }
-        public void Write(char value)   { byteList.AddRange(BitConverter.GetBytes(value)); }
+        public void Write(bool value) { byteList.AddRange(BitConverter.GetBytes(value)); }
+        public void Write(char value) { byteList.AddRange(BitConverter.GetBytes(value)); }
         public void Write(double value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(float value)  { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(int value)    { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(long value)   { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(short value)  { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(uint value)   { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(ulong value)  { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(float value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(int value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(long value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(short value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(uint value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
+        public void Write(ulong value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
         public void Write(ushort value) { byteList.AddRange(ToProperEndian(BitConverter.GetBytes(value))); }
-        public void Write(string value) 
+        public void Write(string value)
         {
             Write(value.Length);
-            //byteList.AddRange(ToProperEndian(Encoding.ASCII.GetBytes(value)));
             byteList.AddRange(Encoding.UTF8.GetBytes(value));
         }
 
         private byte[] ToProperEndian(byte[] value)
         {
-            if(BitConverter.IsLittleEndian)
+            if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(value);
             }
@@ -105,241 +104,106 @@ namespace MonstroeNet
         public byte ReadByte(bool moveIndexPosition = true)
         {
             int typeSize = 1;
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                var value = byteList[CurrentIndex];
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'byte'!");
-            //}
+            var value = byteList[CurrentIndex];
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public byte[] ReadBytes(int length, bool moveIndexPosition = true)
         {
             int typeSize = length;
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                var value = byteList.GetRange(CurrentIndex, length).ToArray();
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'byte[]'!");
-            //}
+            var value = byteList.GetRange(CurrentIndex, length).ToArray();
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public bool ReadBool(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(bool);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //var value = BitConverter.ToBoolean(ByteArray, CurrentIndex);
-                var value = BitConverter.ToBoolean(new byte[] { byteList[CurrentIndex] }, 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'bool'!");
-            //}
+            var value = BitConverter.ToBoolean(new byte[] { byteList[CurrentIndex] }, 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public char ReadChar(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(char);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //var value = BitConverter.ToChar(ByteArray, CurrentIndex);
-                var value = BitConverter.ToChar(new byte[] { byteList[CurrentIndex] }, 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'char'!");
-            //}
+            var value = BitConverter.ToChar(new byte[] { byteList[CurrentIndex] }, 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public double ReadDouble(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(double);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToDouble(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToDouble(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0); 
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'double'!");
-            //}
+            var value = BitConverter.ToDouble(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public float ReadFloat(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(float);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToSingle(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToSingle(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'float'!");
-            //}
+            var value = BitConverter.ToSingle(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public int ReadInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(int);
-
-            //if(byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToInt32(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToInt32(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'int'!");
-            //}
+            var value = BitConverter.ToInt32(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public long ReadLong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(long);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToInt64(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToInt64(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //   throw new Exception("Could not read value of type 'long'!");
-            //}
+            var value = BitConverter.ToInt64(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public short ReadShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToInt16(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToInt16(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'short'!");
-            //}
+            var value = BitConverter.ToInt16(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public uint ReadUInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(uint);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToUInt32(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToUInt32(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'uint'!");
-            //}
+            var value = BitConverter.ToUInt32(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public ulong ReadULong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(ulong);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToUInt64(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToUInt64(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'ulong'!");
-            //}
+            var value = BitConverter.ToUInt64(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public ushort ReadUShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
-
-            //if (byteList.Count - CurrentIndex > typeSize - 1)
-            //{
-                //byte[] byteVal = new byte[typeSize];
-                //Array.Copy(ByteArray, CurrentIndex, byteVal, 0, typeSize);
-                //var value = BitConverter.ToUInt16(ToProperEndian(byteVal), 0);
-                var value = BitConverter.ToUInt16(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
-                CurrentIndex += moveIndexPosition ? typeSize : 0;
-                return value;
-            //}
-            //else
-            //{
-            //    throw new Exception("Could not read value of type 'ushort'!");
-            //}
+            var value = BitConverter.ToUInt16(ToProperEndian(byteList.GetRange(CurrentIndex, typeSize).ToArray()), 0);
+            CurrentIndex += moveIndexPosition ? typeSize : 0;
+            return value;
         }
 
         public string ReadString(bool moveIndexPosition = true)
         {
-            //try
-            //{
-                //int strLen = ReadInt(false);
-                int strLen = ReadInt(false);
-                //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex + 4, strLen);
-                //var value = Encoding.ASCII.GetString(ByteArray, CurrentIndex, strLen);
-                var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex + 4, strLen).ToArray());
-                //CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
-                CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
-                return value;
-            //}
-            //catch
-            //{
-            //    throw new Exception("Could not read value of type 'string'!");
-            //}
+            int strLen = ReadInt(false);
+            var value = Encoding.UTF8.GetString(byteList.GetRange(CurrentIndex + 4, strLen).ToArray());
+            CurrentIndex += moveIndexPosition ? strLen + 4 : 0;
+            return value;
         }
-
-
 
         private bool disposed = false;
 
@@ -351,14 +215,14 @@ namespace MonstroeNet
 
         protected virtual void Dispose(bool disposing)
         {
-            if(!disposed)
+            if (!disposed)
             {
-                if(disposing)
+                if (disposing)
                 {
                     CurrentIndex = 0;
                     byteList = null;
                 }
-                
+
                 disposed = true;
             }
         }

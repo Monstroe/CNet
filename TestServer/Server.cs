@@ -10,7 +10,7 @@ namespace TestServer
 {
     internal class Server : IEventNetListener
     {
-        private int testCounter = 100;
+        private int testCounter = 0;
 
         private static Server instance;
         public static Server Instance

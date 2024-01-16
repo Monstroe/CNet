@@ -10,7 +10,7 @@ namespace TestClient
 {
     internal class Client : IEventNetClient
     {
-        private int testCounter = 100;
+        private int testCounter = 0;
 
         private static Client instance;
         public static Client Instance
@@ -36,7 +36,6 @@ namespace TestClient
         }
 
         private NetClient client;
-        private NetEndPoint serverEP;
 
         private Client()
         {
@@ -59,13 +58,13 @@ namespace TestClient
                 Thread.Sleep(15);
 
                 // UDP Packet Test
-                if(client.IsConnected && serverEP != null) 
+                if(client.IsConnected && client.RemoteUDPEndPoint != null) 
                 {
                     NetPacket packet = new NetPacket();
                     packet.Write("UDP: ");
                     packet.Write(counter);
                     counter++;
-                    //serverEP.Send(packet, PacketProtocol.UDP);
+                    //client.RemoteUDPEndPoint.Send(packet, PacketProtocol.UDP);
                 }
             }
         }
@@ -76,7 +75,6 @@ namespace TestClient
             NetPacket packet = new NetPacket();
             packet.Write("Hello Server!");
             remoteEndPoint.Send(packet, PacketProtocol.TCP);
-            serverEP = remoteEndPoint;
         }
 
         public void OnDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
