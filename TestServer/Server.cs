@@ -10,8 +10,6 @@ namespace TestServer
 {
     internal class Server : IEventNetListener
     {
-        private int testCounter = 100;
-
         private static Server instance;
         public static Server Instance
         {
@@ -23,7 +21,7 @@ namespace TestServer
             }
         }
 
-        public int Port 
+        public int Port
         {
             get { return listener.Port; }
             set { listener.Port = value; }
@@ -50,17 +48,24 @@ namespace TestServer
             {
                 listener.Update();
                 Thread.Sleep(15);
-
-                if(listener.RemoteUDPEndPoints.Count > 0) 
-                {
-                    NetPacket packet = new NetPacket();
-                    packet.Write("UDP: ");
-                    packet.Write(counter);
-                    counter++;
-                    //foreach(NetEndPoint remoteEP in listener.RemoteTCPEndPoints)
-                        //remoteEP.Send(packet, PacketProtocol.UDP);
-                }
+                counter = UDPPacketLoop(counter);
             }
+        }
+
+        private int UDPPacketLoop(int counter)
+        {
+            // UDP Packet Test
+            if (listener.RemoteUDPEndPoints.Count > 0)
+            {
+                NetPacket packet = new NetPacket();
+                packet.Write("UDP: ");
+                packet.Write(counter);
+                counter++;
+                foreach (NetEndPoint remoteEP in listener.RemoteUDPEndPoints)
+                    remoteEP.Send(packet, PacketProtocol.UDP);
+            }
+
+            return counter;
         }
 
         public void OnConnectionRequest(NetRequest request)
@@ -71,142 +76,41 @@ namespace TestServer
 
         public void OnClientConnected(NetEndPoint remoteEndPoint)
         {
-            //Console.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " Connected");
-            Console.WriteLine("Client " + listener.System.RemoteTCPEndPoint.EndPoint.ToString() + " Connected " + listener.System.RemoteUDPEndPoint.EndPoint.ToString());
-
-            if(testCounter == 100) 
-            {
-                NetPacket hello = new NetPacket();
-                hello.Write("Hello Client!");
-                remoteEndPoint.Send(hello, PacketProtocol.TCP);
-                hello.Clear();
-                //listener.Dispose();
-                //listener.Close(true);
-                //remoteEndPoint.DisconnectForcefully();
-                //hello.Write("Disconnecting from Client!");
-                //NetPacket goodbye = new NetPacket();
-                //goodbye.Write("Goodbye!");
-                //remoteEndPoint.Disconnect(goodbye);
-                //goodbye.Clear();
-                return;
-            }
-
-            NetPacket greeting = new NetPacket();
-            greeting.Write("Hello Client!");
-
-            if(testCounter == 2) 
-            {
-                remoteEndPoint.Send(greeting, PacketProtocol.TCP);
-                remoteEndPoint.DisconnectForcefully();
-                return;
-            }
-
-            if(testCounter == 3) 
-            {
-                remoteEndPoint.Send(greeting, PacketProtocol.TCP);
-                return;
-            }
-
-            if(testCounter == 5) 
-            {
-                listener.Close(true);
-                return;
-            }
+            Console.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " Connected");
+            NetPacket packet = new NetPacket();
+            packet.Write("Hello Client!");
+            remoteEndPoint.Send(packet, PacketProtocol.TCP);
+            packet.Clear();
+            packet.Write("I am a TCP Packet");
+            remoteEndPoint.Send(packet, PacketProtocol.TCP);
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
             Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint.ToString() + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? ". Message: " + disconnect.DisconnectData.ReadString() : ""));
-
-            
-            if(testCounter == 0) 
-            {
-                if(disconnect.DisconnectCode == DisconnectCode.ConnectionRejected)
-                    PassedTest(0);
-                else
-                    FailedTest(0);
-                return;
-            }
-
-            if(testCounter == 1) 
-            {
-                if(disconnect.DisconnectCode == DisconnectCode.ConnectionClosed)
-                    PassedTest(1);
-                else
-                    FailedTest(1);
-                return;
-            }
-            
-            if(testCounter == 2)
-            {
-                if(disconnect.DisconnectCode == DisconnectCode.ConnectionClosedForcefully)
-                    PassedTest(2);
-                else
-                    FailedTest(2);
-                return;
-            }
-            
-            if(testCounter == 4) 
-            {
-                if(disconnect.DisconnectCode == DisconnectCode.ConnectionClosedWithMessage)
-                    PassedTest(4);
-                else
-                    FailedTest(4);
-                return;
-            }
-            
-            if(testCounter == 5) 
-            {
-                if(disconnect.DisconnectCode == DisconnectCode.ConnectionClosed)
-                    PassedTest(5);
-                else
-                    FailedTest(5);
-                return;
-            }
         }
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
         {
             string message = packet.ReadString();
-            if(protocol == PacketProtocol.UDP)
+            if (protocol == PacketProtocol.UDP)
                 message += packet.ReadInt();
+
             Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
 
-           /* NetPacket goodbye = new NetPacket();
-            goodbye.Write("Goodbye!");
-
-            if(testCounter == 3) 
-            {
-                if(message == "Hello Server!")
-                    PassedTest(3);
-                else
-                    FailedTest(3);
-                remoteEndPoint.Disconnect(goodbye);
-                return;
-            }*/
+            NetPacket responsePacket = new NetPacket();
+            responsePacket.Write("TCP Packet Response");
+            remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
         }
 
         public void OnNetworkError(SocketException socketException)
         {
             Console.WriteLine("Network Error: " + socketException.SocketErrorCode.ToString());
-            //Console.WriteLine("Network Error: " + socketException.ToString());
         }
 
         static void Main(string[] args)
         {
             Server.Instance.Start(7777);
-        }
-
-        private void PassedTest(int testNumber) 
-        {
-            Console.WriteLine("TEST " + testNumber + " PASS ------------------------");
-            testCounter = testNumber + 1;
-        }
-
-        private void FailedTest(int testNumber) 
-        {
-            Console.WriteLine("TEST " + testNumber + " FAIL ------------------------");
-            testCounter = testNumber + 1;
         }
     }
 }
