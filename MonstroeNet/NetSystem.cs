@@ -600,7 +600,7 @@ namespace MonstroeNet
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
             }
 
-            Buffer.BlockCopy(buffer, receivedPacket.CurrentIndex, buffer, 0, receivedPacket.UnreadLength);
+            Buffer.BlockCopy(buffer, receivedPacket.CurrentIndex, buffer, 0, receivedPacket.UnreadLength);   // <<-- TODO
             return (finalPacket, validPacket);
         }
 
