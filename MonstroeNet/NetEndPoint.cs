@@ -13,6 +13,7 @@ namespace MonstroeNet
     public class NetEndPoint
     {
         public IPEndPoint EndPoint { get; }
+        public IPEndPoint UDPEndPoint { get; internal set; }
 
         public string Address
         {
