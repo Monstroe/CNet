@@ -55,13 +55,13 @@ namespace TestServer
         private int UDPPacketLoop(int counter)
         {
             // UDP Packet Test
-            if (listener.RemoteUDPEndPoints.Count > 0)
+            if (listener.RemoteEndPoints.Count > 0)
             {
                 NetPacket packet = new NetPacket();
                 packet.Write("UDP: ");
                 packet.Write(counter);
                 counter++;
-                foreach (NetEndPoint remoteEP in listener.RemoteUDPEndPoints)
+                foreach (NetEndPoint remoteEP in listener.RemoteEndPoints)
                     remoteEP.Send(packet, PacketProtocol.UDP);
             }
 
@@ -76,7 +76,7 @@ namespace TestServer
 
         public void OnClientConnected(NetEndPoint remoteEndPoint)
         {
-            Console.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " Connected");
+            Console.WriteLine("Client " + remoteEndPoint.TCPEndPoint.ToString() + " Connected");
             NetPacket packet = new NetPacket();
             packet.Write("Hello Client!");
             remoteEndPoint.Send(packet, PacketProtocol.TCP);
@@ -87,7 +87,7 @@ namespace TestServer
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
-            Console.WriteLine("Disconnected from " + remoteEndPoint.EndPoint.ToString() + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? ". Message: " + disconnect.DisconnectData.ReadString() : ""));
+            Console.WriteLine("Disconnected from " + remoteEndPoint.TCPEndPoint.ToString() + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? ". Message: " + disconnect.DisconnectData.ReadString() : ""));
         }
 
         int udpRecvCounter = 1;
@@ -105,7 +105,7 @@ namespace TestServer
             }
             else
             {
-                Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
+                Console.WriteLine("Packet Received from " + remoteEndPoint.TCPEndPoint.ToString() + ": " + message);
                 NetPacket responsePacket = new NetPacket();
                 responsePacket.Write("TCP Packet Response");
                 //remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
@@ -114,7 +114,7 @@ namespace TestServer
             /*if (protocol == PacketProtocol.UDP) 
                 message += packet.ReadInt();
 
-            Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + message);
+            Console.WriteLine("Packet Received from " + remoteEndPoint.TCPEndPoint.ToString() + ": " + message);
 
             NetPacket responsePacket = new NetPacket();
             responsePacket.Write("TCP Packet Response");*/

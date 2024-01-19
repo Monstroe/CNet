@@ -12,23 +12,29 @@ namespace MonstroeNet
 {
     public class NetEndPoint
     {
-        public IPEndPoint EndPoint { get; }
+        public IPEndPoint TCPEndPoint { get; }
         public IPEndPoint UDPEndPoint { get; internal set; }
 
         public string Address
         {
-            get { return EndPoint.Address.ToString(); }
-            set { EndPoint.Address = IPAddress.Parse(value); }
+            get { return TCPEndPoint.Address.ToString(); }
+            set { TCPEndPoint.Address = IPAddress.Parse(value); }
         }
 
-        public int Port
+        public int TCPPort
         {
-            get { return EndPoint.Port; }
-            set { EndPoint.Port = value; }
+            get { return TCPEndPoint.Port; }
+            set { TCPEndPoint.Port = value; }
+        }
+
+        public int UDPPort 
+        {
+            get { return UDPEndPoint.Port; }
+            set { UDPEndPoint.Port = value; }
         }
 
         internal Socket tcpSocket;
-        internal IPEndPoint udpEndPoint;
+        //nternal IPEndPoint udpEndPoint;
         internal CancellationTokenSource cancellationTokenSource;
         private NetSystem netSystem;
 
@@ -40,7 +46,7 @@ namespace MonstroeNet
 
         internal NetEndPoint(IPEndPoint ipEndPoint, Socket tcpSocket, NetSystem netSystem) : this(netSystem)
         {
-            EndPoint = ipEndPoint;
+            TCPEndPoint = ipEndPoint;
             this.tcpSocket = tcpSocket;
         }
 

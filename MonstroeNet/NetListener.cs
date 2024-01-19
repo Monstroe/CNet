@@ -21,9 +21,7 @@ namespace MonstroeNet
 
         public int MaxPendingConnections { get { return system.MaxPendingConnections; } }
 
-        public List<NetEndPoint> RemoteTCPEndPoints { get { return system.RemoteTCPEndPoints; } }
-
-        public List<NetEndPoint> RemoteUDPEndPoints { get { return system.RemoteUDPEndPoints; } }
+        public List<NetEndPoint> RemoteEndPoints { get { return system.RemoteEndPoints; } }
 
         public NetListener()
         {

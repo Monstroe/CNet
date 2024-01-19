@@ -47,7 +47,7 @@ namespace MonstroeNet
         public Protocol TCP { get; }
         public Protocol UDP { get; }
 
-        public NetEndPoint RemoteTCPEndPoint
+        public NetEndPoint RemoteEndPoint
         {
             get
             {
@@ -58,28 +58,10 @@ namespace MonstroeNet
             }
         }
 
-        public NetEndPoint RemoteUDPEndPoint
-        {
-            get
-            {
-                if (connectionsUDP.Count == 1)
-                    return connectionsUDP.Values.ToList().First();
-                else
-                    return null;
-            }
-        }
-
-        public List<NetEndPoint> RemoteTCPEndPoints
+        public List<NetEndPoint> RemoteEndPoints
         {
             get { return connectionsTCP.Values.ToList(); }
         }
-
-        public List<NetEndPoint> RemoteUDPEndPoints
-        {
-            get { return connectionsUDP.Values.ToList(); }
-        }
-
-        //private const int UDPPortReceiveCode = -100;
 
         private Dictionary<IPEndPoint, NetEndPoint> connectionsTCP;
         private Dictionary<IPEndPoint, NetEndPoint> connectionsUDP;
@@ -162,7 +144,7 @@ namespace MonstroeNet
 
             IPEndPoint ep = new IPEndPoint(IPAddress.Parse(Address), Port);
             NetEndPoint remoteEP = new NetEndPoint(ep, tcpSocket, this);
-            remoteEP.udpEndPoint = ep;
+            remoteEP.UDPEndPoint = ep;
 
             bool tcpConnected = false;
             bool udpConnected = false;
@@ -286,7 +268,7 @@ namespace MonstroeNet
         {
             ThreadManager.ExecuteOnMainThread(async () =>
             {
-                connectionsTCP.Add(remoteEP.EndPoint, remoteEP);
+                connectionsTCP.Add(remoteEP.TCPEndPoint, remoteEP);
                 if (result)
                 {
                     await SendRequestAccept(remoteEP);
@@ -294,11 +276,9 @@ namespace MonstroeNet
                     try
                     {
                         int port = udpPortData.ReadInt();
-                        IPEndPoint endPoint = new IPEndPoint(remoteEP.EndPoint.Address, port);
-                        NetEndPoint udpEndPoint = new NetEndPoint(endPoint, remoteEP.tcpSocket, this);
-                        remoteEP.udpEndPoint = endPoint;
-                        udpEndPoint.udpEndPoint = endPoint;
-                        connectionsUDP.Add(udpEndPoint.EndPoint, udpEndPoint);
+                        IPEndPoint endPoint = new IPEndPoint(remoteEP.TCPEndPoint.Address, port);
+                        remoteEP.UDPEndPoint = endPoint;
+                        connectionsUDP.Add(remoteEP.UDPEndPoint, remoteEP);
                     }
                     catch (IndexOutOfRangeException ex)
                     {
@@ -371,9 +351,9 @@ namespace MonstroeNet
                 }
                 else
                 {
-                    if (remoteEP.udpEndPoint != null)
+                    if (remoteEP.UDPEndPoint != null)
                     {
-                        await udpSocket.SendToAsync(segBuffer, SocketFlags.None, remoteEP.udpEndPoint);
+                        await udpSocket.SendToAsync(segBuffer, SocketFlags.None, remoteEP.UDPEndPoint);
                     }
                 }
 
@@ -460,8 +440,8 @@ namespace MonstroeNet
             remoteEP.cancellationTokenSource.Cancel();
             remoteEP.tcpSocket.Shutdown(SocketShutdown.Both);
             remoteEP.tcpSocket.Close();
-            connectionsTCP.Remove(remoteEP.EndPoint);
-            connectionsUDP.Remove(remoteEP.udpEndPoint);
+            connectionsTCP.Remove(remoteEP.TCPEndPoint);
+            connectionsUDP.Remove(remoteEP.UDPEndPoint);
         }
 
         private async Task SendRequestAccept(NetEndPoint remoteEP)

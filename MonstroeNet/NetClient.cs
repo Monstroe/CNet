@@ -26,8 +26,7 @@ namespace MonstroeNet
 
         public bool IsConnected { get { return system.IsConnected; } }
 
-        public NetEndPoint RemoteTCPEndPoint { get { return system.RemoteTCPEndPoint; } }
-        public NetEndPoint RemoteUDPEndPoint { get { return system.RemoteUDPEndPoint; } }
+        public NetEndPoint RemoteEndPoint { get { return system.RemoteEndPoint; } }
 
         public NetClient()
         {
@@ -61,17 +60,17 @@ namespace MonstroeNet
 
         public void Disconnect()
         {
-            system.Disconnect(RemoteTCPEndPoint);
+            system.Disconnect(RemoteEndPoint);
         }
 
         public void Disconnect(NetPacket disconnectPacket)
         {
-            system.Disconnect(RemoteTCPEndPoint, disconnectPacket);
+            system.Disconnect(RemoteEndPoint, disconnectPacket);
         }
 
         public void DisconnectForcefully()
         {
-            system.DisconnectForcefully(RemoteTCPEndPoint);
+            system.DisconnectForcefully(RemoteEndPoint);
         }
 
         public void Close(bool sendDisconnectPacketToRemote) 

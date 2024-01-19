@@ -127,13 +127,13 @@ namespace UnitySampleReferrer
             clients.Add(remoteEndPoint, new Client(remoteEndPoint));
             packet.Write(id.ToString());
             Send(clients[remoteEndPoint], packet, PacketProtocol.TCP);
-            Console.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " Connected!");
+            Console.WriteLine("Client " + remoteEndPoint.TCPEndPoint.ToString() + " Connected!");
             Console.WriteLine("Number of Clients Online: " + clients.Count);
         }
 
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
         {
-            Console.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " disconnected: " + disconnect.DisconnectCode.ToString());
+            Console.WriteLine("Client " + remoteEndPoint.TCPEndPoint.ToString() + " disconnected: " + disconnect.DisconnectCode.ToString());
 
             if (clients[remoteEndPoint].CurrentRoom != null)
             {
@@ -168,7 +168,7 @@ namespace UnitySampleReferrer
 
             if (protocol == PacketProtocol.TCP)
             {
-                Console.WriteLine("Packet Received from " + remoteEndPoint.EndPoint.ToString() + ": " + command);
+                Console.WriteLine("Packet Received from " + remoteEndPoint.TCPEndPoint.ToString() + ": " + command);
             }
 
             if (packetHandlers.ContainsKey(command))
@@ -190,7 +190,7 @@ namespace UnitySampleReferrer
                 }
                 else
                 {
-                    Console.Error.WriteLine("Client " + remoteEndPoint.EndPoint.ToString() + " Sent Invalid Packet: " + packet);
+                    Console.Error.WriteLine("Client " + remoteEndPoint.TCPEndPoint.ToString() + " Sent Invalid Packet: " + packet);
                 }
             }
         }
@@ -210,7 +210,7 @@ namespace UnitySampleReferrer
 
         public void LeaveRoom(Client client, Room room)
         {
-            Console.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Left Room with Code: " + room.ID);
+            Console.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Left Room with Code: " + room.ID);
             Send(room.Members, MemberLeftPacket(client.ID), PacketProtocol.TCP);
             room.Members.Remove(client);
         }
@@ -235,7 +235,7 @@ namespace UnitySampleReferrer
             client.CurrentRoom = room;
             rooms.Add(room.ID, room);
 
-            Console.WriteLine("Creating Room... New Room Code for Client " + client.NetEP.EndPoint.ToString() + ": " + room.ID);
+            Console.WriteLine("Creating Room... New Room Code for Client " + client.NetEP.TCPEndPoint.ToString() + ": " + room.ID);
             Send(client, RoomCodePacket(room.ID), PacketProtocol.TCP);
         }
 
@@ -243,7 +243,7 @@ namespace UnitySampleReferrer
         {
             if (client.CurrentRoom != null)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Join a Room Despite Already Being in One");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Join a Room Despite Already Being in One");
                 Send(client, InvalidPacket("Client Already in Room"), PacketProtocol.TCP);
                 return;
             }
@@ -257,7 +257,7 @@ namespace UnitySampleReferrer
                     room.Members.Add(client);
                     client.CurrentRoom = room;
 
-                    Console.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Joining Room with Code: " + room.ID);
+                    Console.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Joining Room with Code: " + room.ID);
                     foreach (Client member in room.Members)
                     {
                         Send(member, MemberJoinedPacket(client.ID), PacketProtocol.TCP);
@@ -267,13 +267,13 @@ namespace UnitySampleReferrer
                 }
                 else
                 {
-                    Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Sent Room Code that does not Exist: " + roomID);
+                    Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Sent Room Code that does not Exist: " + roomID);
                     Send(client, InvalidPacket("Nonexistent Room Code"), PacketProtocol.TCP);
                 }
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Sent Invalid Room Code: " + e.Message);
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Sent Invalid Room Code: " + e.Message);
                 Send(client, InvalidPacket("Invalid Room Code"), PacketProtocol.TCP);
             }
         }
@@ -282,14 +282,14 @@ namespace UnitySampleReferrer
         {
             if (client.CurrentRoom == null)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Leave a Room Despite not Being in One");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Leave a Room Despite not Being in One");
                 Send(client, InvalidPacket("Client Not in Room"), PacketProtocol.TCP);
                 return;
             }
 
             if (client.IsHost)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Leave a Room as a Host");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Leave a Room as a Host");
                 Send(client, InvalidPacket("Host Attempted to Leave Room"), PacketProtocol.TCP);
                 return;
             }
@@ -301,14 +301,14 @@ namespace UnitySampleReferrer
         {
             if (client.CurrentRoom == null)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Start a Room Despite not Being in One");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Start a Room Despite not Being in One");
                 Send(client, InvalidPacket("Client Not in Room"), PacketProtocol.TCP);
                 return;
             }
 
             if (!client.IsHost)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Start a Room as a Guest");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Start a Room as a Guest");
                 Send(client, InvalidPacket("Guest Attempted to Start Room"), PacketProtocol.TCP);
                 return;
             }
@@ -321,14 +321,14 @@ namespace UnitySampleReferrer
         {
             if (client.CurrentRoom == null)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Leave a Room Despite not Being in One");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Leave a Room Despite not Being in One");
                 Send(client, InvalidPacket("Client Not in Room"), PacketProtocol.TCP);
                 return;
             }
 
             if (!client.IsHost)
             {
-                Console.Error.WriteLine("Client " + client.NetEP.EndPoint.ToString() + " Attempted to Close a Room as a Guest");
+                Console.Error.WriteLine("Client " + client.NetEP.TCPEndPoint.ToString() + " Attempted to Close a Room as a Guest");
                 Send(client, InvalidPacket("Guest Attempted to Close Room"), PacketProtocol.TCP);
             }
 
