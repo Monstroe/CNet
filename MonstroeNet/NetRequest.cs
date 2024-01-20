@@ -10,10 +10,7 @@ namespace MonstroeNet
     {
         public IPEndPoint ClientEndPoint
         {
-            get
-            {
-                return clientEP.EndPoint;
-            }
+            get { return clientEP.TCPEndPoint; }
         }
 
         internal NetEndPoint clientEP;

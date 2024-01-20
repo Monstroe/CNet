@@ -1,10 +1,6 @@
 ﻿using MonstroeNet;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TestServer
 {
@@ -47,7 +43,7 @@ namespace TestServer
             while (true)
             {
                 listener.Update();
-                Thread.Sleep(100);
+                Thread.Sleep(15);
                 counter = UDPPacketLoop(counter);
             }
         }
@@ -108,7 +104,7 @@ namespace TestServer
                 Console.WriteLine("Packet Received from " + remoteEndPoint.TCPEndPoint.ToString() + ": " + message);
                 NetPacket responsePacket = new NetPacket();
                 responsePacket.Write("TCP Packet Response");
-                //remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
+                remoteEndPoint.Send(responsePacket, PacketProtocol.TCP);
             }
 
             /*if (protocol == PacketProtocol.UDP) 

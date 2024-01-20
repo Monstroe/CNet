@@ -34,7 +34,6 @@ namespace MonstroeNet
         }
 
         internal Socket tcpSocket;
-        //nternal IPEndPoint udpEndPoint;
         internal CancellationTokenSource cancellationTokenSource;
         private NetSystem netSystem;
 
