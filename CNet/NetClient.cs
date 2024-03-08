@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace MonstroeNet
+namespace CNet
 {
     public class NetClient
     {
