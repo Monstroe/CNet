@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace MonstroeNet
+namespace CNet
 {
     public class NetClient
     {
         private NetSystem system;
 
         public NetSystem System { get { return system; } }
-        public Protocol TCP { get { return system.TCP; } }
-        public Protocol UDP { get { return system.UDP; } }
+        public ProtocolSettings TCP { get { return system.TCP; } }
+        public ProtocolSettings UDP { get { return system.UDP; } }
 
         public string Address
         {
@@ -23,6 +21,8 @@ namespace MonstroeNet
             get { return system.Port; }
             set { system.Port = value; }
         }
+
+        public bool IsConnected { get { return system.IsConnected; } }
 
         public NetEndPoint RemoteEndPoint { get { return system.RemoteEndPoint; } }
 
@@ -59,19 +59,21 @@ namespace MonstroeNet
         public void Disconnect()
         {
             system.Disconnect(RemoteEndPoint);
-            system.Close();
         }
 
-        //public void Disconnect(NetPacket disconnectPacket)
-        //{
-        //    system.Disconnect(RemoteEndPoint, disconnectPacket);
-        //    system.Close();
-        //}
+        public void Disconnect(NetPacket disconnectPacket)
+        {
+            system.Disconnect(RemoteEndPoint, disconnectPacket);
+        }
 
         public void DisconnectForcefully()
         {
             system.DisconnectForcefully(RemoteEndPoint);
-            system.Close();
+        }
+
+        public void Close(bool sendDisconnectPacketToRemote) 
+        {
+            system.Close(sendDisconnectPacketToRemote);
         }
 
         private bool disposed = false;

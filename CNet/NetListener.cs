@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 
-namespace MonstroeNet
+namespace CNet
 {
     public class NetListener
     {
         private NetSystem system;
 
         public NetSystem System { get { return system; } }
-        public Protocol TCP { get { return system.TCP; } }
-        public Protocol UDP { get { return system.UDP; } }
+        public ProtocolSettings TCP { get { return system.TCP; } }
+        public ProtocolSettings UDP { get { return system.UDP; } }
+
+        public string Address
+        {
+            get { return system.Address; }
+            set { system.Address = value; }
+        }
 
         public int Port
         {
@@ -58,19 +62,19 @@ namespace MonstroeNet
             system.Disconnect(remoteEP);
         }
 
-        //public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
-        //{
-        //    system.Disconnect(remoteEP, disconnectPacket);
-        //}
+        public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
+        {
+            system.Disconnect(remoteEP, disconnectPacket);
+        }
 
         public void DisconnectForcefully(NetEndPoint remoteEP)
         {
             system.DisconnectForcefully(remoteEP);
         }
 
-        public void Close()
+        public void Close(bool sendDisconnectPacketToRemote)
         {
-            system.Close();
+            system.Close(sendDisconnectPacketToRemote);
         }
 
         private bool disposed = false;
