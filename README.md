@@ -21,9 +21,9 @@ CNet is a lightweight TCP and UDP networking library built in C# and designed fo
 - Peer to peer connections (UDP hole punching)
 
 ### Installation
-1. Download latest from releases page
+1. Download latest from the [Releases](https://github.com/Monstroe/CNet/releases) page
 2. Unzip folder
-3. Drag and drop the 'CNet' directory into your development environment OR compile into DLL
+3. Drag and drop the 'CNet' directory into your development environment (or compile into DLL)
 
 ## Acknowledgements
 - Official networking library of [Hidden Roll](https://hiddenroll.com/)
