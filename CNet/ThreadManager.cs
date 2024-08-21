@@ -1,20 +1,23 @@
 using System;
 using System.Collections.Concurrent;
 
-internal class ThreadManager
+namespace CNet
 {
-    private static ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
-
-    public static void ExecuteOnMainThread(Action action)
+    internal static class ThreadManager
     {
-        mainThreadActions.Enqueue(action);
-    }
+        private static ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
 
-    public static void PollMainThread()
-    {
-        while (mainThreadActions.TryDequeue(out Action action))
+        public static void ExecuteOnMainThread(Action action)
         {
-            action();
+            mainThreadActions.Enqueue(action);
+        }
+
+        public static void PollMainThread()
+        {
+            while (mainThreadActions.TryDequeue(out Action action))
+            {
+                action();
+            }
         }
     }
 }

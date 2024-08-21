@@ -1,52 +1,46 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace CNet
 {
+    /// <summary>
+    /// Represents a network disconnection event.
+    /// </summary>
     public class NetDisconnect
     {
-        public DisconnectCode DisconnectCode
-        {
-            get { return disconnectCode; }
-        }
+        /// /// {
+        /// <summary>
+        /// Gets the reason for the disconnection.
+        /// </summary>
+        public DisconnectCode DisconnectCode { get; }
 
-        public NetPacket DisconnectData
-        {
-            get { return disconnectData; }
-        }
+        /// <summary>
+        /// Gets the data associated with the disconnection.
+        /// </summary>
+        public NetPacket DisconnectData { get; }
 
-        public SocketError SocketError
-        {
-            get { return socketError; }
-        }
-
-        private DisconnectCode disconnectCode;
-        private NetPacket disconnectData;
-        private SocketError socketError;
+        /// <summary>
+        /// Gets the socket error associated with the disconnection.
+        /// </summary>
+        public SocketError SocketError { get; }
 
         internal NetDisconnect(DisconnectCode reason)
         {
-            disconnectCode = reason;
+            DisconnectCode = reason;
         }
 
         internal NetDisconnect(DisconnectCode reason, NetPacket data) : this(reason)
         {
-            disconnectData = data;
-        }
-
-        internal NetDisconnect(DisconnectCode reason, byte[] dataBytes) : this(reason)
-        {
-            disconnectData = new NetPacket(dataBytes);
+            DisconnectData = data;
         }
 
         internal NetDisconnect(DisconnectCode reason, SocketError error) : this(reason)
         {
-            socketError = error;
+            SocketError = error;
         }
 
         internal NetDisconnect(DisconnectCode reason, NetPacket data, SocketError error) : this(reason, data)
         {
-            socketError = error;
+            SocketError = error;
         }
     }
 }

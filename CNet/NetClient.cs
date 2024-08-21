@@ -7,8 +7,8 @@ namespace CNet
         private NetSystem system;
 
         public NetSystem System { get { return system; } }
-        public Protocol TCP { get { return system.TCP; } }
-        public Protocol UDP { get { return system.UDP; } }
+        public ProtocolSettings TCP { get { return system.TCP; } }
+        public ProtocolSettings UDP { get { return system.UDP; } }
 
         public string Address
         {

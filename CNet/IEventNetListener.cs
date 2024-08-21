@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace CNet
 {
@@ -12,7 +11,7 @@ namespace CNet
         public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect);
 
         public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol);
-        
-        public void OnNetworkError(SocketException socketException);
+
+        public void OnNetworkError(NetEndPoint remoteEndPoint, SocketException socketException);
     }
 }

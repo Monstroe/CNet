@@ -1,3 +1,3 @@
-# MonstroeNet
+# CNet
 
 AKA LiteNetCole
