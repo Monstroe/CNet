@@ -1,6 +1,6 @@
 # CNet
 
-CNet is a lightweight TCP and UDP networking library built in C# and designed for use in multiplayer games and realtime simulations. It was primarily built to be used in Unity, but it can also be used in any other .NET environments. This project is still actively under development, see the future additions below.
+CNet is a lightweight TCP and UDP networking library built in C# and designed for use in multiplayer games and real-time simulations. It was primarily built to be used in Unity, but it can also be used in any other .NET environments. This project is still actively under development, see the future additions below.
 
 ### High-Level Unity API COMING SOON!
 
