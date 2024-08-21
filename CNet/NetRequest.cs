@@ -11,7 +11,10 @@ namespace CNet
         /// <summary>
         /// Gets the client's endpoint.
         /// </summary>
-        public IPEndPoint ClientEndPoint { get; }
+        public IPEndPoint ClientEndPoint
+        {
+            get { return clientEP.TCPEndPoint; }
+        }
 
         internal NetEndPoint clientEP;
         internal NetSystem netSystem;
