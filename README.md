@@ -7,7 +7,7 @@ CNet is a lightweight TCP and UDP networking library built in C# and designed fo
 ## Getting Started
 
 ### Current Features
-- Build with .NET Standard 2.1
+- Built with .NET Standard 2.1
 - Can be used with Unity
 - Simple connection handling (able to accept or deny clients)
 - Simple disconnection handling
