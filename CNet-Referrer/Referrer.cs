@@ -170,7 +170,7 @@ public class Referrer : IEventNetListener
     public void LeaveRoom(Client client, Room room)
     {
         Console.WriteLine("Client " + client.RemoteEP.TCPEndPoint.ToString() + " left room with code: " + room.ID);
-        PacketSender.Instance.MemberLeft(client, client.ID);
+        PacketSender.Instance.MemberLeft(room.Members, client.ID);
         room.Members.Remove(client);
     }
 

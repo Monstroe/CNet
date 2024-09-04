@@ -50,13 +50,13 @@ public class PacketSender
         }
     }
 
-    public void MemberLeft(Client client, Guid memberID)
+    public void MemberLeft(List<Client> clients, Guid memberID)
     {
         using (NetPacket packet = new NetPacket(Referrer.Instance.Listener.System, PacketProtocol.TCP))
         {
             packet.Write((short)ServiceSendType.MemberLeft);
             packet.Write(memberID.ToString());
-            Referrer.Instance.Send(client, packet, PacketProtocol.TCP);
+            Referrer.Instance.Send(clients, packet, PacketProtocol.TCP);
         }
     }
 
