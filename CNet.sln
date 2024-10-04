@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServer", "CNet-Tests\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClient", "CNet-Tests\TestClient\TestClient.csproj", "{7948F346-BE57-4C9A-933D-BC09A1CFA604}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNet-Referrer", "CNet-Referrer\CNet-Referrer.csproj", "{64BE9FF3-E7C7-450C-B9BD-0F230E14F836}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
