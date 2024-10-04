@@ -222,7 +222,7 @@ namespace CNet
 
             try
             {
-                await udpSocket.ConnectAsync(Address, Port);
+                udpSocket.Connect(Address, Port);
                 udpConnected = true;
             }
             catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex); }
@@ -687,19 +687,20 @@ namespace CNet
                 }
                 catch (SocketException ex)
                 {
-                    ThrowErrorOnMainThread(netEndPoint, ex);
-                    DisconnectOnMainThread(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false, false);
+                    if (ex.SocketErrorCode != SocketError.OperationAborted)
+                    {
+                        ThrowErrorOnMainThread(netEndPoint, ex);
+                        DisconnectOnMainThread(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false, false);
+                    }
+
                     disconnect = true;
                 }
-                catch (OperationCanceledException)
-                {
-                    disconnect = true;
-                }
+
                 packetPool.Return(buffer);
             }
         }
 
-        private async Task<(NetPacket, bool)> ReceiveTCPAsync(NetEndPoint netEndPoint, NetPacket receivedPacket, byte[] buffer, CancellationTokenSource tcpCancelSource, bool ignoreExpectedLength = false)
+        private Task<(NetPacket, bool)> ReceiveTCPAsync(NetEndPoint netEndPoint, NetPacket receivedPacket, byte[] buffer, CancellationTokenSource tcpCancelSource, bool ignoreExpectedLength = false)
         {
             NetPacket finalPacket = new NetPacket(this, PacketProtocol.TCP);
             ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer, receivedPacket.Length, buffer.Length - receivedPacket.Length);
@@ -762,7 +763,7 @@ namespace CNet
                 }
 
                 // If there are no more bytes already in receivedPacket, receive more
-                var receivedBytes = await netEndPoint.tcpSocket.ReceiveAsync(segBuffer, SocketFlags.None, tcpCancelSource.Token);
+                var receivedBytes = netEndPoint.tcpSocket.Receive(segBuffer, SocketFlags.None);
                 receivedPacket.Length += receivedBytes;
 
                 // If a completely blank packet was sent
@@ -775,7 +776,7 @@ namespace CNet
                 segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
             }
 
-            return (finalPacket, validPacket);
+            return Task.FromResult((finalPacket, validPacket));
         }
 
         private async Task<NetPacket> ReceiveTCPAsync(NetEndPoint remoteEP, CancellationTokenSource tcpCancelSource, bool ignoreExpectedLength = false)
@@ -826,37 +827,37 @@ namespace CNet
             }
         }
 
-        private async Task<(NetPacket, NetEndPoint, bool)> ReceiveUDPAsync(NetPacket receivedPacket, byte[] buffer)
+        private Task<(NetPacket, NetEndPoint, bool)> ReceiveUDPAsync(NetPacket receivedPacket, byte[] buffer)
         {
             NetPacket finalPacket = new NetPacket(this, PacketProtocol.UDP);
             NetEndPoint remoteEP = new NetEndPoint(this);
 
-            ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer);
             bool validPacket = false;
 
             while (!mainCancelTokenSource.IsCancellationRequested)
             {
-                var receivedBytes = await udpSocket.ReceiveFromAsync(segBuffer, SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
+                EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                var receivedBytes = udpSocket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref remoteEndPoint);
 
                 // Disregard packet as it is too small
-                if (receivedBytes.ReceivedBytes < 4)
+                if (receivedBytes < 4)
                 {
                     continue;
                 }
 
                 // If the received data is from a currently connected end point
-                if (connectionsUDP.TryGetValue((IPEndPoint)receivedBytes.RemoteEndPoint, out remoteEP))
+                if (connectionsUDP.TryGetValue((IPEndPoint)remoteEndPoint, out remoteEP))
                 {
                     int expectedLength = receivedPacket.ReadInt();
 
                     // Packets expected length was larger than the actual amount of bytes received
-                    if (expectedLength > receivedBytes.ReceivedBytes - 4)
+                    if (expectedLength > receivedBytes - 4)
                     {
                         finalPacket.Write((int)DisconnectCode.InvalidPacket);
                         break;
                     }
                     // Packets expected length was smaller than the actual amount of bytes received
-                    if (expectedLength < receivedBytes.ReceivedBytes - 4)
+                    if (expectedLength < receivedBytes - 4)
                     {
                         finalPacket.Write((int)DisconnectCode.InvalidPacket);
                         break;
@@ -893,7 +894,7 @@ namespace CNet
                 }
             }
 
-            return (finalPacket, remoteEP, validPacket);
+            return Task.FromResult((finalPacket, remoteEP, validPacket));
         }
 
         private async void Heartbeat(int heartbeatInterval)
