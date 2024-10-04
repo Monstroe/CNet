@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace CNet
 {
+    /// <summary>
+    /// Represents a network system. This class is the main class for all network operations.
+    /// </summary>
     public class NetSystem : IDisposable
     {
         enum RequestStatus
@@ -22,7 +25,7 @@ namespace CNet
         public delegate void ConnectedHandler(NetEndPoint remoteEndPoint);
         public delegate void DisconnectedHandler(NetEndPoint remoteEndPoint, NetDisconnect disconnect);
         public delegate void PacketReceiveHandler(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol);
-        public delegate void NetworkErrorHandler(NetEndPoint remoteEndPoint, SocketException socketException);
+        public delegate void NetworkErrorHandler(NetEndPoint? remoteEndPoint, SocketException socketException);
 
         public event ConnectionRequestHandler OnConnectionRequest;
         public event ConnectedHandler OnConnected;
@@ -30,16 +33,55 @@ namespace CNet
         public event PacketReceiveHandler OnPacketReceive;
         public event NetworkErrorHandler OnNetworkError;
 
+        /// <summary>
+        /// Gets the address of the system.
+        /// </summary>
+        /// <remarks>
+        /// If the system is a client, this is the server's address. If the system is a listener, this is the listener's address.
+        /// </remarks>
         public string Address { get; set; }
+
+        /// <summary>
+        /// Gets the port of the system.
+        /// </summary>
         public int Port { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum number of pending connections that can be queued.
+        /// </summary>
+        /// <remarks>
+        /// This property is only used when the system is a listener.
+        /// </remarks>
         public int MaxPendingConnections { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether the system is connected.
+        /// </summary>
+        /// <remarks>
+        /// This property is only used when the system is a client.
+        /// </remarks>
         public bool IsConnected { get { return tcpSocket.Connected; } }
 
+        /// <summary>
+        /// Gets the mode of the system.
+        /// </summary>
         public SystemMode Mode { get; private set; }
 
+        /// <summary>
+        /// Gets the settings for the TCP protocol.
+        /// </summary>
         public ProtocolSettings TCP { get; }
+        /// <summary>
+        /// Gets the settings for the UDP protocol.
+        /// </summary>
         public ProtocolSettings UDP { get; }
 
+        /// <summary>
+        /// Gets the remote end point.
+        /// </summary>
+        /// <remarks>
+        /// This property is only used when the system is a client.
+        /// </remarks>
         public NetEndPoint RemoteEndPoint
         {
             get
@@ -51,6 +93,12 @@ namespace CNet
             }
         }
 
+        /// <summary>
+        /// Gets the remote end points.
+        /// </summary>
+        /// <remarks>
+        /// This property is only used when the system is a listener.
+        /// </remarks>
         public List<NetEndPoint> RemoteEndPoints
         {
             get { return connectionsTCP.Values.ToList(); }
@@ -66,6 +114,9 @@ namespace CNet
         private CancellationTokenSource mainCancelTokenSource;
         private ArrayPool<byte> packetPool;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetSystem"/> class.
+        /// </summary>
         public NetSystem()
         {
             MaxPendingConnections = 100;
@@ -87,12 +138,21 @@ namespace CNet
             packetPool = ArrayPool<byte>.Shared;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetSystem"/> class.
+        /// </summary>
+        /// <param name="address">The address of the system.</param>
+        /// <param name="port">The port of the system.</param>
         public NetSystem(string address, int port) : this()
         {
             Address = address;
             Port = port;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetSystem"/> class.
+        /// </summary>
+        /// <param name="port">The port of the system.</param>
         public NetSystem(int port) : this()
         {
             Port = port;
@@ -108,6 +168,10 @@ namespace CNet
             udpSocket = new Socket(ep.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
         }
 
+        /// <summary>
+        /// Registers an interface to receive network events.
+        /// </summary>
+        /// <param name="iClient">The client interface to register.</param>
         public void RegisterInterface(IEventNetClient iClient)
         {
             OnConnected += iClient.OnConnected;
@@ -116,6 +180,10 @@ namespace CNet
             OnNetworkError += iClient.OnNetworkError;
         }
 
+        /// <summary>
+        /// Registers an interface to receive network events.
+        /// </summary>
+        /// <param name="iListener">The listener interface to register.</param>
         public void RegisterInterface(IEventNetListener iListener)
         {
             OnConnectionRequest += iListener.OnConnectionRequest;
@@ -125,6 +193,9 @@ namespace CNet
             OnNetworkError += iListener.OnNetworkError;
         }
 
+        /// <summary>
+        /// Connects to the server.
+        /// </summary>
         public async void Connect()
         {
             // Checks to prevent method from being called twice
@@ -221,6 +292,9 @@ namespace CNet
             ThreadManager.ExecuteOnMainThread(() => OnConnected?.Invoke(remoteEP));
         }
 
+        /// <summary>
+        /// Listens for incoming connections.
+        /// </summary>
         public void Listen()
         {
             // Checks to prevent method from being called twice
@@ -342,6 +416,12 @@ namespace CNet
             Task.Run(() => Heartbeat(NetConstants.HeartbeatInterval), mainCancelTokenSource.Token);
         }
 
+        /// <summary>
+        /// Sends a network packet using the specified protocol.
+        /// </summary>
+        /// <param name="remoteEP">The remote end point to send the packet to.</param>
+        /// <param name="packet">The network packet to send.</param>
+        /// <param name="protocol">The protocol to use for sending the packet.</param>
         public void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
         {
             if (packet.Length > (protocol == PacketProtocol.TCP ? TCP.MaxPacketSize : UDP.MaxPacketSize))
@@ -434,11 +514,20 @@ namespace CNet
             return returnValue;
         }
 
+        /// <summary>
+        /// Disconnects from the network.
+        /// </summary>
+        /// <param name="remoteEP">The remote end point to disconnect from.</param>
         public void Disconnect(NetEndPoint remoteEP)
         {
             DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosed), true, false);
         }
 
+        /// <summary>
+        /// Disconnects from the network with a specified disconnect packet.
+        /// </summary>
+        /// <param name="remoteEP">The remote end point to disconnect from.</param>
+        /// <param name="disconnectPacket">The disconnect packet to send.</param>
         public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
         {
             if (disconnectPacket.Protocol != PacketProtocol.TCP)
@@ -458,6 +547,10 @@ namespace CNet
             DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedWithMessage, packet), true, true);
         }
 
+        /// <summary>
+        /// Disconnects from the network forcefully.
+        /// </summary>
+        /// <param name="remoteEP">The remote end point to disconnect from.</param>
         public async void DisconnectForcefully(NetEndPoint remoteEP)
         {
             await DisconnectInternal(remoteEP, new NetDisconnect(DisconnectCode.ConnectionClosedForcefully), false, false);
@@ -511,6 +604,10 @@ namespace CNet
             return returnValue;
         }
 
+        /// <summary>
+        /// Closes the network system.
+        /// </summary>
+        /// <param name="sendDisconnectPacketToRemote">Whether to send a disconnect packet to the remote end point(s).</param>
         public void Close(bool sendDisconnectPacketToRemote)
         {
             foreach (var remoteEP in connectionsTCP.Values)
@@ -548,11 +645,17 @@ namespace CNet
             });
         }
 
-        private void ThrowErrorOnMainThread(NetEndPoint remoteEP, SocketException ex)
+        private void ThrowErrorOnMainThread(NetEndPoint? remoteEP, SocketException ex)
         {
             ThreadManager.ExecuteOnMainThread(() => OnNetworkError?.Invoke(remoteEP, ex));
         }
 
+        /// <summary>
+        /// Polls all pending events.
+        /// </summary>
+        /// <remarks>
+        /// This method should be called in an update loop. It will receive all pending events on the main thread.
+        /// </remarks>
         public void Update()
         {
             ThreadManager.PollMainThread();

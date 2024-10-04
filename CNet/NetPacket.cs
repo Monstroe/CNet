@@ -4,6 +4,9 @@ using System.Text;
 
 namespace CNet
 {
+    /// <summary>
+    /// Represents a network packet.
+    /// </summary>
     public class NetPacket : IDisposable
     {
         internal byte[] ByteArray
@@ -445,6 +448,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an sbyte from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of an sbyte.</param>
+        /// <returns>The read sbyte.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public sbyte ReadSByte(bool moveIndexPosition = true)
         {
             int typeSize = 1;
@@ -453,6 +462,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an sbyte array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the sbyte array.</param>
+        /// <returns>The read sbyte array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public sbyte[] ReadSBytes(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -463,6 +478,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a boolean from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a boolean.</param>
+        /// <returns>The read boolean.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public bool ReadBool(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(bool);
@@ -471,6 +492,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a boolean array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the boolean array.</param>
+        /// <returns>The read boolean array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public bool[] ReadBools(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -482,6 +509,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a character from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a character.</param>
+        /// <returns>The read character.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public char ReadChar(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(char);
@@ -490,6 +523,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a character array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the character array.</param>
+        /// <returns>The read character array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public char[] ReadChars(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -501,6 +540,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a double from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a double.</param>
+        /// <returns>The read double.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public double ReadDouble(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(double);
@@ -509,6 +554,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a double array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the double array.</param>
+        /// <returns>The read double array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public double[] ReadDoubles(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -520,6 +571,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a float from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a float.</param>
+        /// <returns>The read float.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public float ReadFloat(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(float);
@@ -528,6 +585,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a float array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the float array.</param>
+        /// <returns>The read float array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public float[] ReadFloats(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -539,6 +602,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an integer from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of an integer.</param>
+        /// <returns>The read integer.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public int ReadInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(int);
@@ -547,6 +616,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an integer array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the integer array.</param>
+        /// <returns>The read integer array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public int[] ReadInts(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -558,6 +633,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a long from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a long.</param>
+        /// <returns>The read long.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public long ReadLong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(long);
@@ -566,6 +647,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a long array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the long array.</param>
+        /// <returns>The read long array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public long[] ReadLongs(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -577,6 +664,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a short from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a short.</param>
+        /// <returns>The read short.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public short ReadShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
@@ -585,6 +678,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a short array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the short array.</param>
+        /// <returns>The read short array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public short[] ReadShorts(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -596,6 +695,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned integer from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of an unsigned integer.</param>
+        /// <returns>The read unsigned integer.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public uint ReadUInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(uint);
@@ -604,6 +709,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned integer array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the unsigned integer array.</param>
+        /// <returns>The read unsigned integer array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public uint[] ReadUInts(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -615,6 +726,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned long from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of an unsigned long.</param>
+        /// <returns>The read unsigned long.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public ulong ReadULong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(ulong);
@@ -623,6 +740,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned long array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the unsigned long array.</param>
+        /// <returns>The read unsigned long array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public ulong[] ReadULongs(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -634,6 +757,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned short from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of an unsigned short.</param>
+        /// <returns>The read unsigned short.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public ushort ReadUShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
@@ -642,6 +771,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read an unsigned short array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the unsigned short array.</param>
+        /// <returns>The read unsigned short array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public ushort[] ReadUShorts(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -653,6 +788,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a string from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the string.</param>
+        /// <returns>The read string.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public string ReadString(bool moveIndexPosition = true)
         {
             int strLen = ReadInt();
@@ -661,6 +802,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a string array from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the string array.</param>
+        /// <returns>The read string array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public string[] ReadStrings(bool moveIndexPosition = true)
         {
             int length = ReadInt();
@@ -672,6 +819,13 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Deserializes a network syncable class from the packet.
+        /// </summary>
+        /// <typeparam name="T">The network syncable class type.</typeparam>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the network syncable class.</param>
+        /// <returns>The deserialized network syncable class.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public T DeserializeClass<T>(bool moveIndexPosition = true) where T : class, new()
         {
             int tempIndex = currentIndex;
@@ -680,6 +834,13 @@ namespace CNet
             return obj;
         }
 
+        /// <summary>
+        /// Deserializes a network syncable struct from the packet.
+        /// </summary>
+        /// <typeparam name="T">The network syncable struct type.</typeparam>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the network syncable struct.</param>
+        /// <returns>The deserialized network syncable struct.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public T DeserializeStruct<T>(bool moveIndexPosition = true) where T : struct
         {
             int tempIndex = currentIndex;
