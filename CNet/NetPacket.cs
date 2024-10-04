@@ -24,17 +24,27 @@ namespace CNet
             set => startIndex = value;
         }
 
+        /// <summary>
+        /// Gets the total length of the packet.
+        /// </summary>
         public int Length
         {
             get => count - startIndex;
             internal set => count = value + startIndex;
         }
 
+        /// <summary>
+        /// Gets the unread length of the packet (relative to CurrentIndex).
+        /// </summary>
+        /// <seealso cref="CurrentIndex"/>
         public int UnreadLength
         {
             get => count - currentIndex;
         }
 
+        /// <summary>
+        /// Gets the current index of the packet. Bytes will be read from this point.
+        /// </summary>
         public int CurrentIndex
         {
             get => currentIndex - startIndex;
@@ -46,6 +56,11 @@ namespace CNet
         private int currentIndex;
         private int count;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetPacket"/> class.
+        /// </summary>
+        /// <param name="system">The network system the packet will be sent over.</param>
+        /// <param name="protocol">The protocol that will be used to send this packet.</param>
         public NetPacket(NetSystem system, PacketProtocol protocol) : this(system, protocol, sizeof(int)) { }
 
         internal NetPacket(NetSystem system, PacketProtocol protocol, int startIndex)
@@ -78,25 +93,20 @@ namespace CNet
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(length)), 0, buffer, startIndex - sizeof(int) + offset, sizeof(int));
         }
 
+        /// <summary>
+        /// Writes a byte to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(byte value)
         {
             buffer[count++] = value;
         }
 
+        /// <summary>
+        /// Writes a byte array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(byte[] value)
-        {
-            int length = value.Length;
-            Write(length);
-            Buffer.BlockCopy(value, 0, buffer, count, length);
-            count += length;
-        }
-
-        public void Write(sbyte value)
-        {
-            buffer[count++] = (byte)value;
-        }
-
-        public void Write(sbyte[] value)
         {
             int length = value.Length;
             Write(length);
@@ -111,12 +121,41 @@ namespace CNet
             count += value.Length;
         }
 
+        /// <summary>
+        /// Writes a signed byte to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
+        public void Write(sbyte value)
+        {
+            buffer[count++] = (byte)value;
+        }
+
+        /// <summary>
+        /// Writes a signed byte array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
+        public void Write(sbyte[] value)
+        {
+            int length = value.Length;
+            Write(length);
+            Buffer.BlockCopy(value, 0, buffer, count, length);
+            count += length;
+        }
+
+        /// <summary>
+        /// Writes a boolean to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(bool value)
         {
             Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, count, sizeof(bool));
             count += sizeof(bool);
         }
 
+        /// <summary>
+        /// Writes a boolean array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(bool[] value)
         {
             int length = value.Length;
@@ -125,12 +164,20 @@ namespace CNet
                 Write(b);
         }
 
+        /// <summary>
+        /// Writes a character to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(char value)
         {
             Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, count, sizeof(char));
             count += sizeof(char);
         }
 
+        /// <summary>
+        /// Writes a character array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(char[] value)
         {
             int length = value.Length;
@@ -139,12 +186,20 @@ namespace CNet
                 Write(c);
         }
 
+        /// <summary>
+        /// Writes a double to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(double value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(double));
             count += sizeof(double);
         }
 
+        /// <summary>
+        /// Writes a double array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(double[] value)
         {
             int length = value.Length;
@@ -153,12 +208,20 @@ namespace CNet
                 Write(d);
         }
 
+        /// <summary>
+        /// Writes a float to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(float value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(float));
             count += sizeof(float);
         }
 
+        /// <summary>
+        /// Writes a float array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(float[] value)
         {
             int length = value.Length;
@@ -167,12 +230,20 @@ namespace CNet
                 Write(f);
         }
 
+        /// <summary>
+        /// Writes an integer to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(int value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(int));
             count += sizeof(int);
         }
 
+        /// <summary>
+        /// Writes an integer array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(int[] value)
         {
             int length = value.Length;
@@ -181,12 +252,20 @@ namespace CNet
                 Write(i);
         }
 
+        /// <summary>
+        /// Writes a long to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(long value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(long));
             count += sizeof(long);
         }
 
+        /// <summary>
+        /// Writes a long array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(long[] value)
         {
             int length = value.Length;
@@ -195,12 +274,20 @@ namespace CNet
                 Write(l);
         }
 
+        /// <summary>
+        /// Writes a short to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(short value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(short));
             count += sizeof(short);
         }
 
+        /// <summary>
+        /// Writes a short array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(short[] value)
         {
             int length = value.Length;
@@ -209,12 +296,20 @@ namespace CNet
                 Write(s);
         }
 
+        /// <summary>
+        /// Writes an unsigned integer to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(uint value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(uint));
             count += sizeof(uint);
         }
 
+        /// <summary>                                                                                                                                       
+        /// Writes an unsigned integer array to the packet.                                                                                                                                                                 
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(uint[] value)
         {
             int length = value.Length;
@@ -223,12 +318,20 @@ namespace CNet
                 Write(u);
         }
 
+        /// <summary>
+        /// Writes an unsigned long to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(ulong value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(ulong));
             count += sizeof(ulong);
         }
 
+        /// <summary>
+        /// Writes an unsigned long array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(ulong[] value)
         {
             int length = value.Length;
@@ -237,12 +340,20 @@ namespace CNet
                 Write(u);
         }
 
+        /// <summary>
+        /// Writes an unsigned short to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(ushort value)
         {
             Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(ushort));
             count += sizeof(ushort);
         }
 
+        /// <summary>
+        /// Writes an unsigned short array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(ushort[] value)
         {
             int length = value.Length;
@@ -251,6 +362,10 @@ namespace CNet
                 Write(u);
         }
 
+        /// <summary>
+        /// Writes a string to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(string value)
         {
             Write((uint)value.Length);
@@ -258,6 +373,10 @@ namespace CNet
             count += value.Length;
         }
 
+        /// <summary>
+        /// Writes a string array to the packet.
+        /// </summary>
+        /// <param name="value">The value to be written to the packet.</param>
         public void Write(string[] value)
         {
             int length = value.Length;
@@ -266,16 +385,32 @@ namespace CNet
                 Write(s);
         }
 
+        /// <summary>
+        /// Serializes a network syncable class to the packet.
+        /// </summary>
+        /// <typeparam name="T">The network syncable class type.</typeparam>
+        /// <param name="value">The network syncable class.</param>
         public void SerializeClass<T>(T value) where T : class
         {
             SerializeManager.Instance.Write(this, value);
         }
 
+        /// <summary>
+        /// Serializes a network syncable struct to the packet.
+        /// </summary>
+        /// <typeparam name="T">The network syncable struct type.</typeparam>
+        /// <param name="value">The network syncable struct.</param>
         public void SerializeStruct<T>(T value) where T : struct
         {
             SerializeManager.Instance.Write(this, value);
         }
 
+        /// <summary>
+        /// Read a byte from the packet.
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of a byte.</param>
+        /// <returns>The read byte.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public byte ReadByte(bool moveIndexPosition = true)
         {
             int typeSize = 1;
@@ -284,6 +419,12 @@ namespace CNet
             return value;
         }
 
+        /// <summary>
+        /// Read a byte array from the packet
+        /// </summary>
+        /// <param name="moveIndexPosition">If true, will increment CurrentIndex by the size of the byte array.</param>
+        /// <returns>The read byte array.</returns>
+        /// <seealso cref="CurrentIndex"/>
         public byte[] ReadBytes(bool moveIndexPosition = true)
         {
             int length = ReadInt();
