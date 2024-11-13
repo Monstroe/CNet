@@ -208,6 +208,11 @@ namespace CNet
             Mode = SystemMode.Client;
 
             IPEndPoint ep = new IPEndPoint(IPAddress.Parse(Address), Port);
+            // This should never happen
+            if (tcpSocket == null)
+            {
+                throw new Exception("tcpSocket is null");
+            }
             NetEndPoint remoteEP = new NetEndPoint(ep, ep, tcpSocket, this);
 
             bool tcpConnected = false;
@@ -245,6 +250,11 @@ namespace CNet
                         bool sentUDPPort = false;
                         using (NetPacket udpDataPacket = new NetPacket(this, PacketProtocol.TCP, 0))
                         {
+                            // This should never happen
+                            if (udpSocket.LocalEndPoint == null)
+                            {
+                                throw new Exception("udpSocket.LocalEndPoint is null");
+                            }
                             udpDataPacket.Write(((IPEndPoint)udpSocket.LocalEndPoint).Port);
                             sentUDPPort = await SendInternal(remoteEP, udpDataPacket.ByteSegment, PacketProtocol.TCP, true, false);
                         }
@@ -326,6 +336,11 @@ namespace CNet
                     try
                     {
                         Socket clientTcpSock = await tcpSocket.AcceptAsync();
+                        // This should never happen
+                        if (clientTcpSock.RemoteEndPoint == null)
+                        {
+                            throw new Exception("clientTcpSock.RemoteEndPoint is null");
+                        }
                         NetEndPoint clientEP = new NetEndPoint((IPEndPoint)clientTcpSock.RemoteEndPoint, clientTcpSock, this);
                         NetRequest request = new NetRequest(clientEP, this);
 
@@ -472,9 +487,12 @@ namespace CNet
         {
             try
             {
-                if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                if (remoteEP.tcpSocket.RemoteEndPoint != null)
                 {
-                    return false;
+                    if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                    {
+                        return false;
+                    }
                 }
             }
             catch (ObjectDisposedException) { return false; }
@@ -508,6 +526,11 @@ namespace CNet
 
             if (disposeBuffer)
             {
+                // This should never happen
+                if (packetSegment.Array == null)
+                {
+                    throw new Exception("packetSegment.Array is null");
+                }
                 packetPool.Return(packetSegment.Array);
             }
 
@@ -563,16 +586,19 @@ namespace CNet
 
         private async Task<bool> DisconnectInternal(NetEndPoint remoteEP, NetDisconnect disconnect, bool sendDisconnectPacketToRemote, bool disposeDisconnectPacket)
         {
-            bool returnValue = true;
-
             try
             {
-                if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                if (remoteEP.tcpSocket.RemoteEndPoint != null)
                 {
-                    return false;
+                    if (!connectionsTCP.ContainsKey((IPEndPoint)remoteEP.tcpSocket.RemoteEndPoint))
+                    {
+                        return false;
+                    }
                 }
             }
             catch (ObjectDisposedException) { return false; }
+
+            bool returnValue = true;
 
             if (sendDisconnectPacketToRemote)
             {
@@ -621,7 +647,10 @@ namespace CNet
         private void CloseRemote(NetEndPoint remoteEP)
         {
             remoteEP.tcpCancelTokenSource.Cancel();
-            remoteEP.tcpSocket.Shutdown(SocketShutdown.Both);
+            if (remoteEP.tcpSocket.Connected)
+            {
+                remoteEP.tcpSocket.Shutdown(SocketShutdown.Both);
+            }
             remoteEP.tcpSocket.Close();
             if (!connectionsTCP.TryRemove(remoteEP.TCPEndPoint, out _))
             {
@@ -687,7 +716,7 @@ namespace CNet
                 }
                 catch (SocketException ex)
                 {
-                    if (ex.SocketErrorCode != SocketError.OperationAborted)
+                    if (ex.SocketErrorCode != SocketError.OperationAborted && ex.SocketErrorCode != SocketError.Interrupted)
                     {
                         ThrowErrorOnMainThread(netEndPoint, ex);
                         DisconnectOnMainThread(netEndPoint, new NetDisconnect(DisconnectCode.SocketError, ex.SocketErrorCode), false, false);
@@ -695,6 +724,7 @@ namespace CNet
 
                     disconnect = true;
                 }
+                catch (ObjectDisposedException) { }
 
                 packetPool.Return(buffer);
             }
@@ -703,7 +733,6 @@ namespace CNet
         private Task<(NetPacket, bool)> ReceiveTCPAsync(NetEndPoint netEndPoint, NetPacket receivedPacket, byte[] buffer, CancellationTokenSource tcpCancelSource, bool ignoreExpectedLength = false)
         {
             NetPacket finalPacket = new NetPacket(this, PacketProtocol.TCP);
-            ArraySegment<byte> segBuffer = new ArraySegment<byte>(buffer, receivedPacket.Length, buffer.Length - receivedPacket.Length);
             int expectedLength = 0;
             bool grabbedPacketLength = false;
             bool validPacket = false;
@@ -763,7 +792,7 @@ namespace CNet
                 }
 
                 // If there are no more bytes already in receivedPacket, receive more
-                var receivedBytes = netEndPoint.tcpSocket.Receive(segBuffer, SocketFlags.None);
+                var receivedBytes = netEndPoint.tcpSocket.Receive(buffer, receivedPacket.Length, buffer.Length - receivedPacket.Length, SocketFlags.None);
                 receivedPacket.Length += receivedBytes;
 
                 // If a completely blank packet was sent
@@ -772,8 +801,6 @@ namespace CNet
                     finalPacket.Write((int)DisconnectCode.ConnectionClosedForcefully);
                     break;
                 }
-
-                segBuffer = segBuffer.Slice(segBuffer.Offset + receivedBytes);
             }
 
             return Task.FromResult((finalPacket, validPacket));
@@ -802,9 +829,15 @@ namespace CNet
                     bool validPacket;
                     NetPacket receivedPacket = new NetPacket(buffer, PacketProtocol.UDP);
                     NetPacket finalPacket;
-                    NetEndPoint netEndPoint;
+                    NetEndPoint? netEndPoint;
 
                     (finalPacket, netEndPoint, validPacket) = await ReceiveUDPAsync(receivedPacket, buffer);
+
+                    // This should never happen
+                    if (netEndPoint == null)
+                    {
+                        throw new Exception("Failed to get NetEndPoint from connectionsUDP.");
+                    }
 
                     if (!validPacket)
                     {
@@ -818,19 +851,20 @@ namespace CNet
                 }
                 catch (SocketException ex)
                 {
-                    if(ex.SocketErrorCode != SocketError.OperationAborted) 
+                    if (ex.SocketErrorCode != SocketError.OperationAborted && ex.SocketErrorCode != SocketError.Interrupted)
                     {
                         ThrowErrorOnMainThread(null, ex);
                     }
                 }
+                catch (ObjectDisposedException) { }
                 packetPool.Return(buffer);
             }
         }
 
-        private Task<(NetPacket, NetEndPoint, bool)> ReceiveUDPAsync(NetPacket receivedPacket, byte[] buffer)
+        private Task<(NetPacket, NetEndPoint?, bool)> ReceiveUDPAsync(NetPacket receivedPacket, byte[] buffer)
         {
             NetPacket finalPacket = new NetPacket(this, PacketProtocol.UDP);
-            NetEndPoint remoteEP = new NetEndPoint(this);
+            NetEndPoint? remoteEP = null;
 
             bool validPacket = false;
 
