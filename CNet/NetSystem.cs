@@ -474,6 +474,7 @@ namespace CNet
                 throw new Exception("Packet protocols do not match.");
             }
 
+            int temp = packet.StartIndex;
             packet.StartIndex = 0;
 
             // We must create a new buffer because the passed packet will most likely be disposed by the time SendInternal gets invoked
@@ -481,6 +482,7 @@ namespace CNet
             Buffer.BlockCopy(packet.ByteArray, packet.StartIndex, buffer, 0, packet.Length);
             ArraySegment<byte> packetSegment = new ArraySegment<byte>(buffer, 0, packet.Length);
             ThreadManager.ExecuteOnMainThread(async () => await SendInternal(remoteEP, packetSegment, protocol, disconnectOnError, true));
+            packet.StartIndex = temp;
         }
 
         private async Task<bool> SendInternal(NetEndPoint remoteEP, ArraySegment<byte> packetSegment, PacketProtocol protocol, bool disconnectOnError, bool disposeBuffer)
