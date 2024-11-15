@@ -424,7 +424,7 @@ namespace CNet
                 {
                     if (beginReceiveQueue.TryDequeue(out var netEndPoint))
                     {
-                        StartReceivingTCP(netEndPoint);
+                        Task.Run(() => StartReceivingTCP(netEndPoint), mainCancelTokenSource.Token);
                     }
                 }
             }, mainCancelTokenSource.Token);
