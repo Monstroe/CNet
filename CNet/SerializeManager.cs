@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace CNet
 {
     internal class SerializeManager
     {
-        public static SerializeManager Instance { get; } = new SerializeManager();
-
         private readonly Dictionary<Type, Action<NetPacket, object, FieldInfo>> writeFieldActions = new Dictionary<Type, Action<NetPacket, object, FieldInfo>>();
         private readonly Dictionary<Type, Func<NetPacket, object>> readFieldActions = new Dictionary<Type, Func<NetPacket, object>>();
         private readonly Dictionary<Type, Action<NetPacket, object, PropertyInfo>> writePropertyActions = new Dictionary<Type, Action<NetPacket, object, PropertyInfo>>();
@@ -15,7 +15,7 @@ namespace CNet
 
         private readonly Dictionary<Type, MemberInfo[]> membersCache = new Dictionary<Type, MemberInfo[]>();
 
-        private SerializeManager()
+        public SerializeManager()
         {
             AddReadActions();
             AddWriteActions();
@@ -24,6 +24,10 @@ namespace CNet
 
         public void Write<T>(NetPacket packet, T obj)
         {
+            if (obj == null)
+            {
+                throw new ArgumentNullException("obj", "Cannot serialize a null object.");
+            }
             Write(packet, typeof(T), obj);
         }
 
@@ -47,6 +51,14 @@ namespace CNet
                                 var childSyncable = field.GetValue(obj);
                                 Write(packet, field.FieldType, childSyncable);
                             }
+                            else if (field.FieldType.IsArray && field.FieldType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)
+                            {
+                                packet.Write(((Array)field.GetValue(obj)).Length);
+                                foreach (var item in (Array)field.GetValue(obj))
+                                {
+                                    Write(packet, field.FieldType.GetElementType(), item);
+                                }
+                            }
                             else
                             {
                                 writeFieldActions[field.FieldType].Invoke(packet, obj, field);
@@ -60,6 +72,14 @@ namespace CNet
                             {
                                 var childSyncable = property.GetValue(obj);
                                 Write(packet, property.PropertyType, childSyncable);
+                            }
+                            else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)
+                            {
+                                packet.Write(((Array)property.GetValue(obj)).Length);
+                                foreach (var item in (Array)property.GetValue(obj))
+                                {
+                                    Write(packet, property.PropertyType.GetElementType(), item);
+                                }
                             }
                             else
                             {
@@ -97,6 +117,17 @@ namespace CNet
                                 var childSyncable = Read(field.FieldType, packet);
                                 field.SetValueDirect(__makeref(obj), childSyncable);
                             }
+                            else if (field.FieldType.IsArray && field.FieldType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)
+                            {
+                                int length = packet.ReadInt();
+                                Array array = Array.CreateInstance(field.FieldType.GetElementType(), length);
+                                for (int i = 0; i < length; i++)
+                                {
+                                    var item = Read(field.FieldType.GetElementType(), packet);
+                                    array.SetValue(item, i);
+                                }
+                                field.SetValueDirect(__makeref(obj), array);
+                            }
                             else
                             {
                                 field.SetValueDirect(__makeref(obj), readFieldActions[field.FieldType].Invoke(packet));
@@ -110,6 +141,17 @@ namespace CNet
                             {
                                 var childSyncable = Read(property.PropertyType, packet);
                                 property.SetValue(obj, childSyncable);
+                            }
+                            else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)
+                            {
+                                int length = packet.ReadInt();
+                                Array array = Array.CreateInstance(property.PropertyType.GetElementType(), length);
+                                for (int i = 0; i < length; i++)
+                                {
+                                    var item = Read(property.PropertyType.GetElementType(), packet);
+                                    array.SetValue(item, i);
+                                }
+                                property.SetValue(obj, array);
                             }
                             else
                             {
@@ -137,9 +179,26 @@ namespace CNet
                 CheckFields(type);
                 CheckProperties(type);
 
-                MemberInfo[] members = Array.FindAll(type.GetMembers(type.GetCustomAttribute<NetSyncableAttribute>().BindingFlags), member =>
-                    member is FieldInfo || member is PropertyInfo
-                );
+                MemberInfo[] members = type.GetMembers(type.GetCustomAttribute<NetSyncableAttribute>().BindingFlags).Where(member =>
+                {
+                    // Only consider fields or properties
+                    if (!(member is FieldInfo || member is PropertyInfo))
+                    {
+                        return false;
+                    }
+
+                    // Skip compiler-generated backing fields for auto-properties
+                    if (member is FieldInfo f)
+                    {
+                        if (f.IsDefined(typeof(CompilerGeneratedAttribute), false))
+                            return false;
+                        if (f.Name.StartsWith("<"))
+                            return false;
+                    }
+
+                    return true;
+                }).ToArray();
+
                 membersCache[type] = members;
             }
         }
@@ -149,7 +208,7 @@ namespace CNet
             FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public);
             foreach (FieldInfo f in fields)
             {
-                if (!(f.FieldType.GetCustomAttribute<NetSyncableAttribute>() != null || f.FieldType.IsPrimitive || (f.FieldType.IsArray && f.FieldType.GetElementType().IsPrimitive) || f.FieldType == typeof(string) || f.FieldType == typeof(string[])))
+                if (!(f.FieldType.GetCustomAttribute<NetSyncableAttribute>() != null || f.FieldType.IsPrimitive || (f.FieldType.IsArray && (f.FieldType.GetElementType().IsPrimitive || f.FieldType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)) || f.FieldType == typeof(string) || f.FieldType == typeof(string[])))
                 {
                     throw new Exception("Unsupported Syncable type in " + (type.IsClass ? "class" : "struct") + " '" + type.Name + "'. Only other NetSyncable types, primitive types, arrays of primitive types, and strings are supported.");
                 }
@@ -161,7 +220,7 @@ namespace CNet
             PropertyInfo[] properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
             foreach (PropertyInfo p in properties)
             {
-                if (!(p.PropertyType.GetCustomAttribute<NetSyncableAttribute>() != null || p.PropertyType.IsPrimitive || (p.PropertyType.IsArray && p.PropertyType.GetElementType().IsPrimitive) || p.PropertyType == typeof(string) || p.PropertyType == typeof(string[])))
+                if (!(p.PropertyType.GetCustomAttribute<NetSyncableAttribute>() != null || p.PropertyType.IsPrimitive || (p.PropertyType.IsArray && (p.PropertyType.GetElementType().IsPrimitive || p.PropertyType.GetElementType().GetCustomAttribute<NetSyncableAttribute>() != null)) || p.PropertyType == typeof(string) || p.PropertyType == typeof(string[])))
                 {
                     throw new Exception("Unsupported Syncable type in " + (type.IsClass ? "class" : "struct") + " '" + type.Name + "'. Only other NetSyncable types, primitive types, arrays of primitive types, and strings are supported.");
                 }

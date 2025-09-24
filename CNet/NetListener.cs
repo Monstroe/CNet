@@ -6,9 +6,9 @@ namespace CNet
     /// <summary>
     /// Represents a network listener.
     /// </summary>
-    public class NetListener
+    public class NetListener : IDisposable
     {
-        private NetSystem system;
+        private readonly NetSystem system;
 
         /// <summary>
         /// Gets the underlying NetSystem.
@@ -19,19 +19,16 @@ namespace CNet
         /// Gets the settings for the TCP protocol.
         /// </summary>
         public ProtocolSettings TCP { get { return system.TCP; } }
+
         /// <summary>
         /// Gets the settings for the UDP protocol.
         /// </summary>
         public ProtocolSettings UDP { get { return system.UDP; } }
 
         /// <summary>
-        /// Gets the address of the listener.
+        /// Gets the miscellaneous connection settings.
         /// </summary>
-        public string Address
-        {
-            get { return system.Address; }
-            set { system.Address = value; }
-        }
+        public ConnectionSettings ConnectionSettings { get { return system.ConnectionSettings; } }
 
         /// <summary>
         /// Gets the port of the listener.
@@ -39,18 +36,17 @@ namespace CNet
         public int Port
         {
             get { return system.Port; }
-            set { system.Port = value; }
         }
 
         /// <summary>
-        /// Gets or sets the maximum number of pending connections that can be queued.
+        /// Gets the local end point.
         /// </summary>
-        public int MaxPendingConnections { get { return system.MaxPendingConnections; } set { system.MaxPendingConnections = value; } }
+        public NetEndPoint? LocalEndPoint { get { return system.LocalEndPoint; } }
 
         /// <summary>
         /// Gets the remote end points.
         /// </summary>
-        public List<NetEndPoint> RemoteEndPoints { get { return system.RemoteEndPoints; } }
+        public List<NetEndPoint>? RemoteEndPoints { get { return system.RemoteEndPoints; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetListener"/> class.
@@ -58,25 +54,6 @@ namespace CNet
         public NetListener()
         {
             system = new NetSystem();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NetListener"/> class.
-        /// </summary>
-        /// <param name="address">The address of the server.</param>
-        /// <param name="port">The port of the server.</param>
-        public NetListener(string address, int port)
-        {
-            system = new NetSystem(address, port);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NetListener"/> class.
-        /// </summary>
-        /// <param name="port">The port to listen on.</param>
-        public NetListener(int port)
-        {
-            system = new NetSystem(port);
         }
 
         /// <summary>
@@ -102,9 +79,10 @@ namespace CNet
         /// <summary>
         /// Listens for incoming connections.
         /// </summary>
-        public void Listen()
+        /// <param name="port">The port to listen on.</param>
+        public void Listen(int port)
         {
-            system.Listen();
+            system.Listen(port);
         }
 
         /// <summary>
@@ -113,18 +91,9 @@ namespace CNet
         /// <param name="remoteEP">The remote end point to send the packet to.</param>
         /// <param name="packet">The network packet to send.</param>
         /// <param name="protocol">The protocol to use for sending the packet.</param>
-        public void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        public void Send(NetEndPoint remoteEP, NetPacket packet, TransportProtocol protocol)
         {
             system.Send(remoteEP, packet, protocol);
-        }
-
-        /// <summary>
-        /// Disconnects from the network.
-        /// </summary>
-        /// <param name="remoteEP">The remote end point to disconnect from.</param>
-        public void Disconnect(NetEndPoint remoteEP)
-        {
-            system.Disconnect(remoteEP);
         }
 
         /// <summary>
@@ -132,7 +101,7 @@ namespace CNet
         /// </summary>
         /// <param name="remoteEP">The remote end point to disconnect from.</param>
         /// <param name="disconnectPacket">The disconnect packet to send.</param>
-        public void Disconnect(NetEndPoint remoteEP, NetPacket disconnectPacket)
+        public void Disconnect(NetEndPoint remoteEP, NetPacket? disconnectPacket = null)
         {
             system.Disconnect(remoteEP, disconnectPacket);
         }

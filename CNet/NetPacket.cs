@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Buffers;
+using System.Buffers.Binary;
 using System.Text;
 
 namespace CNet
@@ -16,10 +16,10 @@ namespace CNet
 
         internal ArraySegment<byte> ByteSegment
         {
-            get => new ArraySegment<byte>(buffer, startIndex, count);
+            get => new ArraySegment<byte>(buffer, startIndex, Length);
         }
 
-        internal PacketProtocol Protocol { get; }
+        internal TransportProtocol Protocol { get; }
 
         internal int StartIndex
         {
@@ -51,49 +51,33 @@ namespace CNet
         public int CurrentIndex
         {
             get => currentIndex - startIndex;
-            set => currentIndex = value + startIndex;
+            set => currentIndex = value >= 0 ? value + startIndex : throw new ArgumentOutOfRangeException(nameof(value), "CurrentIndex must be non-negative.");
         }
 
         private readonly byte[] buffer;
         private int startIndex;
         private int currentIndex;
         private int count;
+        private readonly NetSystem system;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetPacket"/> class.
         /// </summary>
         /// <param name="system">The network system the packet will be sent over.</param>
         /// <param name="protocol">The protocol that will be used to send this packet.</param>
-        public NetPacket(NetSystem system, PacketProtocol protocol) : this(system, protocol, sizeof(int)) { }
-
-        internal NetPacket(NetSystem system, PacketProtocol protocol, int startIndex)
+        public NetPacket(NetSystem system, TransportProtocol protocol) : this(system, protocol, sizeof(int))
         {
-            this.buffer = ArrayPool<byte>.Shared.Rent((protocol == PacketProtocol.TCP ? system.TCP.MaxPacketSize : system.UDP.MaxPacketSize) + sizeof(int));
+        }
+
+        // This constructor gives the programmer control over the start index (ONLY USED INTERNALLY)
+        internal NetPacket(NetSystem system, TransportProtocol protocol, int startIndex)
+        {
+            this.buffer = system.PacketPool.Rent((protocol == TransportProtocol.TCP ? system.TCP.MAX_PACKET_SIZE : system.UDP.MAX_PACKET_SIZE) + sizeof(int));
             this.startIndex = startIndex;
             this.Protocol = protocol;
             this.count = startIndex;
             this.currentIndex = startIndex;
-        }
-
-        internal NetPacket(byte[] buffer, PacketProtocol protocol)
-        {
-            this.buffer = buffer;
-            this.startIndex = 0;
-            this.Protocol = protocol;
-            this.count = 0;
-            this.currentIndex = 0;
-        }
-
-        internal void InsertLength()
-        {
-            InsertLength(0);
-        }
-
-        // WARNING: This method will overwrite the first 4 bytes of the buffer (after the startIndex default offset)
-        internal void InsertLength(int offset)
-        {
-            int length = count - sizeof(int) - offset;
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(length)), 0, buffer, startIndex - sizeof(int) + offset, sizeof(int));
+            this.system = system;
         }
 
         /// <summary>
@@ -115,13 +99,6 @@ namespace CNet
             Write(length);
             Buffer.BlockCopy(value, 0, buffer, count, length);
             count += length;
-        }
-
-        // This method will write a byte array to the stream without adding its length beforehand (ONLY USED INTERNALLY)
-        internal void WriteInternal(byte[] value)
-        {
-            Buffer.BlockCopy(value, 0, buffer, count, value.Length);
-            count += value.Length;
         }
 
         /// <summary>
@@ -151,7 +128,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(bool value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, count, sizeof(bool));
+            buffer[count] = (byte)(value ? 1 : 0);
             count += sizeof(bool);
         }
 
@@ -173,8 +150,11 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(char value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, count, sizeof(char));
-            count += sizeof(char);
+            Span<byte> encoded = stackalloc byte[4]; // max 4 bytes per UTF-8 code point
+            int byteCount = Encoding.UTF8.GetBytes(value.ToString(), encoded);
+            buffer[count++] = (byte)byteCount;
+            encoded.Slice(0, byteCount).CopyTo(buffer.AsSpan(count));
+            count += byteCount;
         }
 
         /// <summary>
@@ -195,7 +175,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(double value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(double));
+            BinaryPrimitives.WriteInt64BigEndian(buffer.AsSpan(count, sizeof(double)), BitConverter.DoubleToInt64Bits(value));
             count += sizeof(double);
         }
 
@@ -217,7 +197,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(float value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(float));
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(count, sizeof(float)), BitConverter.SingleToInt32Bits(value));
             count += sizeof(float);
         }
 
@@ -239,7 +219,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(int value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(int));
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(count, sizeof(int)), value);
             count += sizeof(int);
         }
 
@@ -261,7 +241,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(long value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(long));
+            BinaryPrimitives.WriteInt64BigEndian(buffer.AsSpan(count, sizeof(long)), value);
             count += sizeof(long);
         }
 
@@ -283,7 +263,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(short value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(short));
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(count, sizeof(short)), value);
             count += sizeof(short);
         }
 
@@ -305,7 +285,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(uint value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(uint));
+            BinaryPrimitives.WriteUInt32BigEndian(buffer.AsSpan(count, sizeof(uint)), value);
             count += sizeof(uint);
         }
 
@@ -327,7 +307,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(ulong value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(ulong));
+            BinaryPrimitives.WriteUInt64BigEndian(buffer.AsSpan(count, sizeof(ulong)), value);
             count += sizeof(ulong);
         }
 
@@ -349,7 +329,7 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(ushort value)
         {
-            Buffer.BlockCopy(ToProperEndian(BitConverter.GetBytes(value)), 0, buffer, count, sizeof(ushort));
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(count, sizeof(ushort)), value);
             count += sizeof(ushort);
         }
 
@@ -371,9 +351,10 @@ namespace CNet
         /// <param name="value">The value to be written to the packet.</param>
         public void Write(string value)
         {
-            Write((uint)value.Length);
-            Buffer.BlockCopy(Encoding.UTF8.GetBytes(value), 0, buffer, count, value.Length);
-            count += value.Length;
+            int byteCount = Encoding.UTF8.GetByteCount(value);
+            Write(byteCount);
+            Encoding.UTF8.GetBytes(value, 0, value.Length, buffer, count);
+            count += byteCount;
         }
 
         /// <summary>
@@ -395,7 +376,7 @@ namespace CNet
         /// <param name="value">The network syncable class.</param>
         public void SerializeClass<T>(T value) where T : class
         {
-            SerializeManager.Instance.Write(this, value);
+            system.SerializeManager.Write(this, value);
         }
 
         /// <summary>
@@ -405,7 +386,7 @@ namespace CNet
         /// <param name="value">The network syncable struct.</param>
         public void SerializeStruct<T>(T value) where T : struct
         {
-            SerializeManager.Instance.Write(this, value);
+            system.SerializeManager.Write(this, value);
         }
 
         /// <summary>
@@ -430,21 +411,11 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public byte[] ReadBytes(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length + sizeof(int);
             var value = new byte[length];
             Buffer.BlockCopy(buffer, currentIndex, value, 0, length);
-            currentIndex += moveIndexPosition ? typeSize : 0;
-            return value;
-        }
-
-        // This method will read a specific amount of bytes from the buffer instead of getting the length from the byte stream (ONLY USED INTERNALLY)
-        internal byte[] ReadBytesInternal(int length, bool moveIndexPosition = true)
-        {
-            int typeSize = length;
-            var value = new byte[length];
-            Buffer.BlockCopy(buffer, currentIndex, value, 0, length);
-            currentIndex += moveIndexPosition ? typeSize : 0;
+            currentIndex = moveIndexPosition ? currentIndex + length : cachedIndex;
             return value;
         }
 
@@ -470,11 +441,11 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public sbyte[] ReadSBytes(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length + sizeof(int);
             var value = new sbyte[length];
             Buffer.BlockCopy(buffer, currentIndex, value, 0, length);
-            currentIndex += moveIndexPosition ? typeSize : 0;
+            currentIndex = moveIndexPosition ? currentIndex + length : cachedIndex;
             return value;
         }
 
@@ -487,7 +458,7 @@ namespace CNet
         public bool ReadBool(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(bool);
-            var value = BitConverter.ToBoolean(new byte[] { buffer[currentIndex] }, 0);
+            var value = buffer[currentIndex] != 0;
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -500,12 +471,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public bool[] ReadBools(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(bool) + sizeof(int);
             var value = new bool[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadBool();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -517,10 +488,10 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public char ReadChar(bool moveIndexPosition = true)
         {
-            int typeSize = sizeof(char);
-            var value = BitConverter.ToChar(new byte[] { buffer[currentIndex] }, 0);
-            currentIndex += moveIndexPosition ? typeSize : 0;
-            return value;
+            int byteCount = buffer[currentIndex++];
+            var value = Encoding.UTF8.GetString(buffer, currentIndex, byteCount);
+            currentIndex += moveIndexPosition ? byteCount : -1;
+            return value[0];
         }
 
         /// <summary>
@@ -531,12 +502,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public char[] ReadChars(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(char) + sizeof(int);
             var value = new char[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadChar();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -549,7 +520,7 @@ namespace CNet
         public double ReadDouble(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(double);
-            var value = BitConverter.ToDouble(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BitConverter.Int64BitsToDouble(BinaryPrimitives.ReadInt64BigEndian(GetBytes(typeSize, false)));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -562,12 +533,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public double[] ReadDoubles(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(double) + sizeof(int);
             var value = new double[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadDouble();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -580,7 +551,7 @@ namespace CNet
         public float ReadFloat(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(float);
-            var value = BitConverter.ToSingle(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32BigEndian(GetBytes(typeSize, false)));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -593,12 +564,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public float[] ReadFloats(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(float) + sizeof(int);
             var value = new float[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadFloat();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -611,7 +582,7 @@ namespace CNet
         public int ReadInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(int);
-            var value = BitConverter.ToInt32(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadInt32BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -624,12 +595,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public int[] ReadInts(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(int) + sizeof(int);
             var value = new int[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadInt();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -642,7 +613,7 @@ namespace CNet
         public long ReadLong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(long);
-            var value = BitConverter.ToInt64(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadInt64BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -655,12 +626,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public long[] ReadLongs(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(long) + sizeof(int);
             var value = new long[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadLong();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -673,7 +644,7 @@ namespace CNet
         public short ReadShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
-            var value = BitConverter.ToInt16(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadInt16BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -686,12 +657,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public short[] ReadShorts(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(short) + sizeof(int);
             var value = new short[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadShort();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -704,7 +675,7 @@ namespace CNet
         public uint ReadUInt(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(uint);
-            var value = BitConverter.ToUInt32(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadUInt32BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -717,12 +688,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public uint[] ReadUInts(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(uint) + sizeof(int);
             var value = new uint[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadUInt();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -735,7 +706,7 @@ namespace CNet
         public ulong ReadULong(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(ulong);
-            var value = BitConverter.ToUInt64(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadUInt64BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -748,12 +719,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public ulong[] ReadULongs(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(ulong) + sizeof(int);
             var value = new ulong[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadULong();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -766,7 +737,7 @@ namespace CNet
         public ushort ReadUShort(bool moveIndexPosition = true)
         {
             int typeSize = sizeof(short);
-            var value = BitConverter.ToUInt16(ToProperEndian(ReadBytesInternal(typeSize, false)), 0);
+            var value = BinaryPrimitives.ReadUInt16BigEndian(GetBytes(typeSize, false));
             currentIndex += moveIndexPosition ? typeSize : 0;
             return value;
         }
@@ -779,12 +750,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public ushort[] ReadUShorts(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(short) + sizeof(int);
             var value = new ushort[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadUShort();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -796,9 +767,9 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public string ReadString(bool moveIndexPosition = true)
         {
-            int strLen = ReadInt();
-            var value = Encoding.UTF8.GetString(ReadBytesInternal(strLen, false));
-            currentIndex += moveIndexPosition ? strLen : -sizeof(int);
+            int strBytes = ReadInt();
+            var value = Encoding.UTF8.GetString(GetBytes(strBytes, false));
+            currentIndex += moveIndexPosition ? strBytes : -sizeof(int);
             return value;
         }
 
@@ -810,12 +781,12 @@ namespace CNet
         /// <seealso cref="CurrentIndex"/>
         public string[] ReadStrings(bool moveIndexPosition = true)
         {
+            int cachedIndex = currentIndex;
             int length = ReadInt();
-            int typeSize = length * sizeof(int) + sizeof(int);
             var value = new string[length];
             for (int i = 0; i < length; i++)
                 value[i] = ReadString();
-            currentIndex -= moveIndexPosition ? 0 : typeSize;
+            currentIndex = moveIndexPosition ? currentIndex : cachedIndex;
             return value;
         }
 
@@ -829,7 +800,7 @@ namespace CNet
         public T DeserializeClass<T>(bool moveIndexPosition = true) where T : class, new()
         {
             int tempIndex = currentIndex;
-            T obj = SerializeManager.Instance.Read<T>(this);
+            T obj = system.SerializeManager.Read<T>(this);
             currentIndex = moveIndexPosition ? currentIndex : tempIndex;
             return obj;
         }
@@ -844,18 +815,32 @@ namespace CNet
         public T DeserializeStruct<T>(bool moveIndexPosition = true) where T : struct
         {
             int tempIndex = currentIndex;
-            T obj = SerializeManager.Instance.Read<T>(this);
+            T obj = system.SerializeManager.Read<T>(this);
             currentIndex = moveIndexPosition ? currentIndex : tempIndex;
             return obj;
         }
 
-        private byte[] ToProperEndian(byte[] value)
+        // This method will write the length of the packet sizeof(int) bytes before the start index (ONLY USED INTERNALLY)
+        internal void SetLength()
         {
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(value);
-            }
-            return value;
+            int length = count - sizeof(int);
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(startIndex - sizeof(int), sizeof(int)), length);
+        }
+
+        // This method will write a byte array to the stream without adding its length beforehand (ONLY USED INTERNALLY)
+        internal void SetBytes(ArraySegment<byte> value)
+        {
+            Buffer.BlockCopy(value.Array, value.Offset, buffer, count, value.Count);
+            count += value.Count;
+        }
+
+        // This method will read a specific amount of bytes from the buffer instead of getting the length from the byte stream (ONLY USED INTERNALLY)
+        internal ArraySegment<byte> GetBytes(int length, bool moveIndexPosition = true)
+        {
+            int typeSize = length;
+            ArraySegment<byte> segment = new ArraySegment<byte>(buffer, currentIndex, length);
+            currentIndex += moveIndexPosition ? typeSize : 0;
+            return segment;
         }
 
         private bool disposed = false;
@@ -872,10 +857,10 @@ namespace CNet
             {
                 if (disposing)
                 {
-                    currentIndex = 0;
+                    system.PacketPool.Return(buffer);
                     startIndex = 0;
+                    currentIndex = 0;
                     count = 0;
-                    ArrayPool<byte>.Shared.Return(buffer);
                 }
 
                 disposed = true;

@@ -11,21 +11,17 @@ namespace CNet
         /// <summary>
         /// Gets the client's endpoint.
         /// </summary>
-        public IPEndPoint ClientEndPoint
-        {
-            get { return clientEP.TCPEndPoint; }
-        }
+        public NetEndPoint ConnectingEP { get; private set; }
 
-        internal NetEndPoint clientEP;
-        internal NetSystem netSystem;
+        private NetSystem system;
 
         private bool clientAccepted;
         private bool clientDenied;
 
-        internal NetRequest(NetEndPoint requestingEP, NetSystem netSystem)
+        internal NetRequest(NetEndPoint connectingEP, NetSystem system)
         {
-            clientEP = requestingEP;
-            this.netSystem = netSystem;
+            ConnectingEP = connectingEP;
+            this.system = system;
 
             clientAccepted = false;
             clientDenied = false;
@@ -36,7 +32,7 @@ namespace CNet
         /// </summary>
         /// <returns>The client's IP endpoint.</returns>
         /// <exception cref="InvalidOperationException">Thrown if Accept() or Deny() has already been called.</exception>
-        public NetEndPoint Accept()
+        public void AcceptIfKey(string connectionKey)
         {
             if (clientAccepted || clientDenied)
             {
@@ -44,8 +40,7 @@ namespace CNet
             }
 
             clientAccepted = true;
-            netSystem.HandleConnectionResult(true, clientEP);
-            return clientEP;
+            system.HandleConnectionResult(true, ConnectingEP, connectionKey);
         }
 
         /// <summary>
@@ -60,7 +55,7 @@ namespace CNet
             }
 
             clientDenied = true;
-            netSystem.HandleConnectionResult(false, clientEP);
+            system.HandleConnectionResult(false, ConnectingEP, null);
         }
     }
 }

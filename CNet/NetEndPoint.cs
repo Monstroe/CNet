@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace CNet
 {
@@ -17,56 +16,28 @@ namespace CNet
         /// <summary>
         /// Gets the UDP endpoint.
         /// </summary>
-        public IPEndPoint UDPEndPoint { get; internal set; }
+        public IPEndPoint? UDPEndPoint { get; internal set; }
 
         /// <summary>
-        /// Gets the address of both endpoints.
+        /// Gets the unique identifier of the endpoint.
         /// </summary>
-        public string Address
+        public uint ID { get; internal set; }
+
+        internal Socket TCPSocket { get; }
+        internal float TCPConnectionTimeoutTime { get; set; } // milliseconds
+        internal float TCPHeartbeatInterval { get; set; } // milliseconds
+        internal float UDPConnectionTimeoutTime { get; set; } // milliseconds
+        internal float UDPHeartbeatInterval { get; set; } // milliseconds
+
+        private readonly NetSystem netSystem;
+
+        internal NetEndPoint(IPEndPoint tcpEndPoint, IPEndPoint? udpEndPoint, Socket tcpSocket, uint id, NetSystem netSystem)
         {
-            get { return TCPEndPoint.Address.ToString(); }
-        }
-
-        /// <summary>
-        /// Gets the TCP port.
-        /// </summary>
-        public int TCPPort
-        {
-            get { return TCPEndPoint.Port; }
-        }
-
-        /// <summary>
-        /// Gets the UDP port.
-        /// </summary>
-        public int UDPPort
-        {
-            get { return UDPEndPoint.Port; }
-        }
-
-        internal Socket tcpSocket;
-        internal CancellationTokenSource tcpCancelTokenSource;
-        internal float tcpConnectionTimeoutTime; // seconds
-        internal float tcpHearbeatInterval; // seconds
-        internal float udpConnectionTimeoutTime; // seconds
-        internal float udpHearbeatInterval; // seconds
-
-        private NetSystem netSystem;
-
-        internal NetEndPoint(NetSystem netSystem)
-        {
-            this.netSystem = netSystem;
-            tcpCancelTokenSource = new CancellationTokenSource();
-        }
-
-        internal NetEndPoint(IPEndPoint ipEndPoint, Socket tcpSocket, NetSystem netSystem) : this(netSystem)
-        {
-            TCPEndPoint = ipEndPoint;
-            this.tcpSocket = tcpSocket;
-        }
-
-        internal NetEndPoint(IPEndPoint tcpEncPoint, IPEndPoint udpEndPoint, Socket tcpSocket, NetSystem netSystem) : this(tcpEncPoint, tcpSocket, netSystem)
-        {
+            TCPEndPoint = tcpEndPoint;
             UDPEndPoint = udpEndPoint;
+            this.TCPSocket = tcpSocket;
+            this.netSystem = netSystem;
+            this.ID = id;
         }
 
         /// <summary>
@@ -74,24 +45,16 @@ namespace CNet
         /// </summary>
         /// <param name="packet">The network packet to send.</param>
         /// <param name="protocol">The protocol to use for sending the packet.</param>
-        public void Send(NetPacket packet, PacketProtocol protocol)
+        public void Send(NetPacket packet, TransportProtocol protocol)
         {
             netSystem.Send(this, packet, protocol);
-        }
-
-        /// <summary>
-        /// Disconnects from the network.
-        /// </summary>
-        public void Disconnect()
-        {
-            netSystem.Disconnect(this);
         }
 
         /// <summary>
         /// Disconnects from the network with a specified disconnect packet.
         /// </summary>
         /// <param name="disconnectPacket">The disconnect packet to send.</param>
-        public void Disconnect(NetPacket disconnectPacket)
+        public void Disconnect(NetPacket? disconnectPacket = null)
         {
             netSystem.Disconnect(this, disconnectPacket);
         }

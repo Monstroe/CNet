@@ -5,9 +5,9 @@ namespace CNet
     /// <summary>
     /// Represents a network client.
     /// </summary>
-    public class NetClient
+    public class NetClient : IDisposable
     {
-        private NetSystem system;
+        private readonly NetSystem system;
 
         /// <summary>
         /// Gets the underlying NetSystem.
@@ -18,18 +18,23 @@ namespace CNet
         /// Gets the settings for the TCP protocol.
         /// </summary>
         public ProtocolSettings TCP { get { return system.TCP; } }
+
         /// <summary>
         /// Gets the settings for the UDP protocol.
         /// </summary>
         public ProtocolSettings UDP { get { return system.UDP; } }
 
         /// <summary>
+        /// Gets the miscellaneous connection settings.
+        /// </summary>
+        public ConnectionSettings ConnectionSettings { get { return system.ConnectionSettings; } }
+
+        /// <summary>
         /// Gets the address of the server.
         /// </summary>
-        public string Address
+        public string? Address
         {
             get { return system.Address; }
-            set { system.Address = value; }
         }
 
         /// <summary>
@@ -38,7 +43,6 @@ namespace CNet
         public int Port
         {
             get { return system.Port; }
-            set { system.Port = value; }
         }
 
         /// <summary>
@@ -47,9 +51,14 @@ namespace CNet
         public bool IsConnected { get { return system.IsConnected; } }
 
         /// <summary>
+        /// Gets the local end point.
+        /// </summary>
+        public NetEndPoint? LocalEndPoint { get { return system.LocalEndPoint; } }
+
+        /// <summary>
         /// Gets the remote end point.
         /// </summary>
-        public NetEndPoint RemoteEndPoint { get { return system.RemoteEndPoint; } }
+        public NetEndPoint? RemoteEndPoint { get { return system.RemoteEndPoint; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetClient"/> class.
@@ -57,16 +66,6 @@ namespace CNet
         public NetClient()
         {
             system = new NetSystem();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NetClient"/> class.
-        /// </summary>
-        /// <param name="address">The address of the server.</param>
-        /// <param name="port">The port of the server.</param>
-        public NetClient(string address, int port)
-        {
-            system = new NetSystem(address, port);
         }
 
         /// <summary>
@@ -92,37 +91,31 @@ namespace CNet
         /// <summary>
         /// Connects to the server.
         /// </summary>
-        public void Connect()
+        /// <param name="address">The address of the server.</param>
+        /// <param name="port">The port of the server.</param>
+        /// <param name="connectionKey">The connection key to use.</param>
+        public void Connect(string address, int port, string connectionKey)
         {
-            system.Connect();
+            system.Connect(address, port, connectionKey);
         }
 
         /// <summary>
         /// Sends a network packet using the specified protocol.
         /// </summary>
-        /// <param name="remoteEP">The remote end point to send the packet to.</param>
         /// <param name="packet">The network packet to send.</param>
         /// <param name="protocol">The protocol to use for sending the packet.</param>
-        public void Send(NetEndPoint remoteEP, NetPacket packet, PacketProtocol protocol)
+        public void Send(NetPacket packet, TransportProtocol protocol)
         {
-            system.Send(remoteEP, packet, protocol);
-        }
-
-        /// <summary>
-        /// Disconnects from the network.
-        /// </summary>
-        public void Disconnect()
-        {
-            system.Disconnect(RemoteEndPoint);
+            system.Send(RemoteEndPoint!, packet, protocol);
         }
 
         /// <summary>
         /// Disconnects from the network with a specified disconnect packet.
         /// </summary>
         /// <param name="disconnectPacket">The disconnect packet to send.</param>
-        public void Disconnect(NetPacket disconnectPacket)
+        public void Disconnect(NetPacket? disconnectPacket = null)
         {
-            system.Disconnect(RemoteEndPoint, disconnectPacket);
+            system.Disconnect(RemoteEndPoint!, disconnectPacket);
         }
 
         /// <summary>
@@ -130,7 +123,7 @@ namespace CNet
         /// </summary>
         public void DisconnectForcefully()
         {
-            system.DisconnectForcefully(RemoteEndPoint);
+            system.DisconnectForcefully(RemoteEndPoint!);
         }
 
         /// <summary>

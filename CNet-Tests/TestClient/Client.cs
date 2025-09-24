@@ -8,8 +8,8 @@ namespace TestClient;
 public class NetClass
 {
     public int IntValue { get; set; }
-    public string StringValue { get; set; }
-    private float[] FloatValue;
+    public string? StringValue { get; set; }
+    private float[]? FloatValue;
     public NetStruct NetStructValue { get; set; }
 
     public void SetFloatValue(float[] value)
@@ -17,7 +17,7 @@ public class NetClass
         FloatValue = value;
     }
 
-    public float[] GetFloatValue()
+    public float[]? GetFloatValue()
     {
         return FloatValue;
     }
@@ -34,16 +34,14 @@ public struct NetStruct
 class Client : IEventNetClient
 {
     public static Client Instance { get; } = new Client();
-    public string IPAddress
+    public string? Address
     {
         get { return client.Address; }
-        set { client.Address = value; }
     }
 
     public int Port
     {
         get { return client.Port; }
-        set { client.Port = value; }
     }
 
     private NetClient client;
@@ -56,13 +54,11 @@ class Client : IEventNetClient
         client.RegisterInterface(this);
     }
 
-    public void Start(string address, int port)
+    public void Start(string address, int port, string connectionKey)
     {
         Console.WriteLine("Client Starting...");
-        client.Address = address;
-        client.Port = port;
 
-        client.Connect();
+        client.Connect(address, port, connectionKey);
         Console.WriteLine("Client initialized...");
         while (true)
         {
@@ -71,53 +67,55 @@ class Client : IEventNetClient
         }
     }
 
-    public void OnConnected(NetEndPoint remoteEndPoint)
+    public void OnConnected(NetEndPoint remoteEP)
     {
-        Console.WriteLine("Connected to " + remoteEndPoint.TCPEndPoint);
+        Console.WriteLine("Connected to " + remoteEP.TCPEndPoint);
     }
 
-    public void OnDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
+    public void OnDisconnected(NetEndPoint remoteEP, NetDisconnect disconnect)
     {
-        Console.WriteLine("Disconnected from " + remoteEndPoint.TCPEndPoint + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? " - " + disconnect.DisconnectData.ReadString() : ""));
+        Console.WriteLine("Disconnected from " + remoteEP.TCPEndPoint + ": " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? " - " + disconnect.DisconnectData.ReadString() : ""));
     }
 
-    public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
+    public void OnPacketReceived(NetEndPoint remoteEP, NetPacket packet, TransportProtocol protocol)
     {
         NetClass netClass = packet.DeserializeClass<NetClass>();
-        Console.WriteLine("Packet Received from " + remoteEndPoint.TCPEndPoint + " with class: " + netClass.IntValue + ", " + netClass.StringValue + ", (" + netClass.GetFloatValue()[0] + ", " + netClass.GetFloatValue()[1] + ", " + netClass.GetFloatValue()[2] + ")" + ", struct(" + netClass.NetStructValue.IntValue + ", " + netClass.NetStructValue.StringValue + ", " + netClass.NetStructValue.FloatValue + ")");
+        Console.WriteLine("Packet Received from " + remoteEP.TCPEndPoint + " with class: " + netClass.IntValue + ", " + netClass.StringValue + ", (" + netClass.GetFloatValue()![0] + ", " + netClass.GetFloatValue()![1] + ", " + netClass.GetFloatValue()![2] + ")" + ", struct(" + netClass.NetStructValue.IntValue + ", " + netClass.NetStructValue.StringValue + ", " + netClass.NetStructValue.FloatValue + ")");
         packetCount++;
 
         if (packetCount >= 100)
         {
             client.Disconnect();
         }
-
-        using (NetPacket respPacket = new NetPacket(client.System, PacketProtocol.UDP))
+        else
         {
-            NetStruct newNetStruct = new NetStruct();
-            newNetStruct.IntValue = 10;
-            newNetStruct.StringValue = "Hello World!";
-            newNetStruct.FloatValue = 3.14f;
+            using (NetPacket respPacket = new NetPacket(client.System, TransportProtocol.UDP))
+            {
+                NetStruct newNetStruct = new NetStruct();
+                newNetStruct.IntValue = 10;
+                newNetStruct.StringValue = "Hello World!";
+                newNetStruct.FloatValue = 3.14f;
 
-            NetClass newNetClass = new NetClass();
-            newNetClass.IntValue = 20;
-            newNetClass.StringValue = "Goodbye World!";
-            newNetClass.SetFloatValue(new float[] { 1.0f, 2.0f, 3.0f });
-            newNetClass.NetStructValue = newNetStruct;
+                NetClass newNetClass = new NetClass();
+                newNetClass.IntValue = 20;
+                newNetClass.StringValue = "Goodbye World!";
+                newNetClass.SetFloatValue(new float[] { 1.0f, 2.0f, 3.0f });
+                newNetClass.NetStructValue = newNetStruct;
 
-            respPacket.SerializeClass(newNetClass);
-            remoteEndPoint.Send(respPacket, PacketProtocol.UDP);
+                respPacket.SerializeClass(newNetClass);
+                remoteEP.Send(respPacket, TransportProtocol.UDP);
+            }
         }
     }
 
-    public void OnNetworkError(NetEndPoint remoteEndPoint, SocketException socketException)
+    public void OnNetworkError(NetEndPoint? remoteEP, SocketError error)
     {
-        Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
+        Console.WriteLine("Error: " + error.ToString());
     }
 
     // Main Method
     static void Main(string[] args)
     {
-        Client.Instance.Start("127.0.0.1", 7777);
+        Client.Instance.Start("127.0.0.1", 7777, "CNetTest");
     }
 }
