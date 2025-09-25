@@ -14,12 +14,12 @@ namespace CNet
             get => buffer;
         }
 
-        internal ArraySegment<byte> ByteSegment
+        public ArraySegment<byte> ByteSegment
         {
             get => new ArraySegment<byte>(buffer, startIndex, Length);
         }
 
-        internal TransportProtocol Protocol { get; }
+        public TransportProtocol Protocol { get; }
 
         internal int StartIndex
         {
@@ -67,6 +67,17 @@ namespace CNet
         /// <param name="protocol">The protocol that will be used to send this packet.</param>
         public NetPacket(NetSystem system, TransportProtocol protocol) : this(system, protocol, sizeof(int))
         {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetPacket"/> class with initial data
+        /// </summary>
+        /// <param name="system">The network system the packet will be sent over.</param>
+        /// <param name="protocol">The protocol that will be used to send this packet.</param>
+        /// <param name="initialData">The initial data to be written to the packet.</param>
+        public NetPacket(NetSystem system, TransportProtocol protocol, ArraySegment<byte> initialData) : this(system, protocol, sizeof(int))
+        {
+            SetBytes(initialData);
         }
 
         // This constructor gives the programmer control over the start index (ONLY USED INTERNALLY)
