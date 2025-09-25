@@ -253,146 +253,149 @@ namespace CNet
             bool tcpConnected = false;
             bool udpConnected = false;
 
-            try
+            await Task.Run(async () =>
             {
-                await tcpSocket.ConnectAsync(Address, Port);
-                tcpConnected = true;
-            }
-            catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
-
-            try
-            {
-                udpSocket?.Connect(Address, Port);
-                udpConnected = true;
-            }
-            catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
-
-            systemStarted = true;
-            if (!tcpConnected || !udpConnected)
-            {
-                mainCancelTokenSource.Cancel();
-                return;
-            }
-
-            try
-            {
-                var (keyPacket, validKeyPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
-                if (keyPacket.UnreadLength < sizeof(int))
+                try
                 {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                    await tcpSocket.ConnectAsync(Address, Port);
+                    tcpConnected = true;
+                }
+                catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
+
+                try
+                {
+                    udpSocket?.Connect(Address, Port);
+                    udpConnected = true;
+                }
+                catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
+
+                systemStarted = true;
+                if (!tcpConnected || !udpConnected)
+                {
+                    mainCancelTokenSource.Cancel();
                     return;
                 }
 
-                int keyPacketConnectionCode = keyPacket.ReadInt();
-                if (keyPacketConnectionCode == (int)DisconnectionCode.ConnectionDenied)
+                try
                 {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.ConnectionDenied, null, null), false, false);
-                    return;
-                }
-                if (keyPacketConnectionCode != (int)ConnectionCode.ConnectionKeyRequest)
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
-                }
-
-                keyPacket.Dispose();
-
-                using (NetPacket connectionPacket = new NetPacket(this, TransportProtocol.TCP))
-                {
-                    connectionPacket.Write((int)ConnectionCode.ConnectionKey);
-                    connectionPacket.Write(connectionKey);
-                    bool success = await SendInternal(remoteEP, connectionPacket, TransportProtocol.TCP, false, true, true, false); // <-- false because we dispose the packet here
-                    if (!success) // Send Internal already handles the disconnect
+                    var (keyPacket, validKeyPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    if (keyPacket.UnreadLength < sizeof(int))
                     {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
                         return;
                     }
-                }
 
-                var (tokenPacket, validTokenPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
-                if (tokenPacket.UnreadLength < sizeof(int) || !validTokenPacket)
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
-                }
-
-                int tokenPacketConnectionCode = tokenPacket.ReadInt();
-                if (tokenPacketConnectionCode != (int)ConnectionCode.ConnectionTokenRequest)
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
-                }
-
-                if (tokenPacket.UnreadLength != sizeof(ulong))
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
-                }
-
-                ulong token = tokenPacket.ReadULong();
-                tokenPacket.Dispose();
-                bool stopSendingUdp = false;
-                _ = Task.Run(async () =>
-                {
-                    while (!mainCancelTokenSource.IsCancellationRequested && !stopSendingUdp)
+                    int keyPacketConnectionCode = keyPacket.ReadInt();
+                    if (keyPacketConnectionCode == (int)DisconnectionCode.ConnectionDenied)
                     {
-                        using (NetPacket udpPacket = new NetPacket(this, TransportProtocol.UDP, 0))
-                        {
-                            udpPacket.Write((int)ConnectionCode.ConnectionToken);
-                            udpPacket.Write(token);
-                            SendOnMainThread(remoteEP, udpPacket, TransportProtocol.UDP, false, true, false);
-                        }
-
-                        await Task.Delay(1000 / ConnectionSettings.UDP_SEND_RATE, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.ConnectionDenied, null, null), false, false);
+                        return;
                     }
-                }, mainCancelTokenSource.Token);
+                    if (keyPacketConnectionCode != (int)ConnectionCode.ConnectionKeyRequest)
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
 
-                var (acceptedPacket, validAcceptedPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
-                stopSendingUdp = true;
+                    keyPacket.Dispose();
 
-                if (acceptedPacket.UnreadLength < sizeof(int) || !validAcceptedPacket)
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
+                    using (NetPacket connectionPacket = new NetPacket(this, TransportProtocol.TCP))
+                    {
+                        connectionPacket.Write((int)ConnectionCode.ConnectionKey);
+                        connectionPacket.Write(connectionKey);
+                        bool success = await SendInternal(remoteEP, connectionPacket, TransportProtocol.TCP, false, true, true, false); // <-- false because we dispose the packet here
+                        if (!success) // Send Internal already handles the disconnect
+                        {
+                            return;
+                        }
+                    }
+
+                    var (tokenPacket, validTokenPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    if (tokenPacket.UnreadLength < sizeof(int) || !validTokenPacket)
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    int tokenPacketConnectionCode = tokenPacket.ReadInt();
+                    if (tokenPacketConnectionCode != (int)ConnectionCode.ConnectionTokenRequest)
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    if (tokenPacket.UnreadLength != sizeof(ulong))
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    ulong token = tokenPacket.ReadULong();
+                    tokenPacket.Dispose();
+                    bool stopSendingUdp = false;
+                    _ = Task.Run(async () =>
+                    {
+                        while (!mainCancelTokenSource.IsCancellationRequested && !stopSendingUdp)
+                        {
+                            using (NetPacket udpPacket = new NetPacket(this, TransportProtocol.UDP, 0))
+                            {
+                                udpPacket.Write((int)ConnectionCode.ConnectionToken);
+                                udpPacket.Write(token);
+                                SendOnMainThread(remoteEP, udpPacket, TransportProtocol.UDP, false, true, false);
+                            }
+
+                            await Task.Delay(1000 / ConnectionSettings.UDP_SEND_RATE, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
+                        }
+                    }, mainCancelTokenSource.Token);
+
+                    var (acceptedPacket, validAcceptedPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    stopSendingUdp = true;
+
+                    if (acceptedPacket.UnreadLength < sizeof(int) || !validAcceptedPacket)
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    int acceptedPacketConnectionCode = acceptedPacket.ReadInt();
+                    if (acceptedPacketConnectionCode != (int)ConnectionCode.ConnectionAccepted)
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    if (acceptedPacket.UnreadLength != sizeof(uint))
+                    {
+                        DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
+                        return;
+                    }
+
+                    uint newId = acceptedPacket.ReadUInt();
+                    acceptedPacket.Dispose();
+                    LocalEndPoint!.ID = newId;
+
+                    if (!connectionsTCP.TryAdd(endPoint, remoteEP))
+                    {
+                        throw new Exception("Failed to add NetEndPoint to connectionsTCP");
+                    }
+                    if (!connectionsUDP.TryAdd(endPoint, remoteEP))
+                    {
+                        throw new Exception("Failed to add NetEndPoint to connectionsUDP");
+                    }
+
+                    ConnectOnMainThread(remoteEP);
+                    StartReceiving();
+                    StartHeartbeats();
+                    beginReceiveQueue.Enqueue(remoteEP);
                 }
-
-                int acceptedPacketConnectionCode = acceptedPacket.ReadInt();
-                if (acceptedPacketConnectionCode != (int)ConnectionCode.ConnectionAccepted)
+                catch (SocketException ex)
                 {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
+                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.SocketError, null, ex.SocketErrorCode), false, false);
+                    mainCancelTokenSource.Cancel();
                 }
-
-                if (acceptedPacket.UnreadLength != sizeof(uint))
-                {
-                    DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
-                    return;
-                }
-
-                uint newId = acceptedPacket.ReadUInt();
-                acceptedPacket.Dispose();
-                LocalEndPoint!.ID = newId;
-
-                if (!connectionsTCP.TryAdd(endPoint, remoteEP))
-                {
-                    throw new Exception("Failed to add NetEndPoint to connectionsTCP");
-                }
-                if (!connectionsUDP.TryAdd(endPoint, remoteEP))
-                {
-                    throw new Exception("Failed to add NetEndPoint to connectionsUDP");
-                }
-
-                ConnectOnMainThread(remoteEP);
-                StartReceiving();
-                StartHeartbeats();
-                beginReceiveQueue.Enqueue(remoteEP);
-            }
-            catch (SocketException ex)
-            {
-                DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.SocketError, null, ex.SocketErrorCode), false, false);
-                mainCancelTokenSource.Cancel();
-            }
-            catch (ObjectDisposedException) { }
-            catch (OperationCanceledException) { }
+                catch (ObjectDisposedException) { }
+                catch (OperationCanceledException) { }
+            }, mainCancelTokenSource.Token);
         }
 
         private void ConnectOnMainThread(NetEndPoint remoteEP)
