@@ -140,7 +140,7 @@ namespace CNet
                 CONNECTION_TIMEOUT = 10000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
-                MAX_PACKET_SIZE = 2048
+                MAX_PACKET_SIZE = 1024
             };
 
             UDP = new ProtocolSettings
@@ -149,7 +149,7 @@ namespace CNet
                 CONNECTION_TIMEOUT = 10000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
-                MAX_PACKET_SIZE = 2048
+                MAX_PACKET_SIZE = 1024
             };
 
             ConnectionSettings = new ConnectionSettings
