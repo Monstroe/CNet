@@ -111,7 +111,7 @@ namespace CNet
         }
 
         internal ArrayPool<byte> PacketPool { get; private set; }
-        internal SerializeManager SerializeManager { get; } = new SerializeManager();
+        internal SerializeManager SerializeManager { get; }
 
         private readonly ConcurrentDictionary<IPEndPoint, NetEndPoint> connectionsTCP;
         private readonly ConcurrentDictionary<IPEndPoint, NetEndPoint> connectionsUDP;
@@ -160,6 +160,9 @@ namespace CNet
                 UDP_SEND_RATE = 4
             };
 
+            PacketPool = ArrayPool<byte>.Shared;
+            SerializeManager = new SerializeManager();
+
             connectionsTCP = new ConcurrentDictionary<IPEndPoint, NetEndPoint>();
             connectionsUDP = new ConcurrentDictionary<IPEndPoint, NetEndPoint>();
             connectingClients = new ConcurrentDictionary<ulong, NetConnect>();
@@ -168,8 +171,6 @@ namespace CNet
             nextClientId = 0;
             systemStarted = false;
             mainCancelTokenSource = new CancellationTokenSource();
-
-            PacketPool = ArrayPool<byte>.Shared;
         }
 
         private void Init()
