@@ -52,6 +52,7 @@ class Client : IEventNetClient
     {
         client = new NetClient();
         client.RegisterInterface(this);
+        client.Serializer.RegisterAssembly(Assembly.GetEntryAssembly()!);
     }
 
     public void Start(string address, int port, string connectionKey)

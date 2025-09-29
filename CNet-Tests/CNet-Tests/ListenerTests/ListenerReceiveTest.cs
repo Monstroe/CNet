@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using System.Reflection;
 using CNet;
 using FluentAssertions;
 
@@ -13,6 +14,7 @@ class ListenerReceiveTest : ListenerNetworkTest
 
     public override void OnClientConnected(NetEndPoint remoteEP)
     {
+        Listener!.Serializer.RegisterAssembly(Assembly.GetEntryAssembly()!);
         Task.Run(async () =>
         {
             for (int i = 0; i < 20; i++)

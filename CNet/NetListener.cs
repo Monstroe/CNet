@@ -26,9 +26,14 @@ namespace CNet
         public ProtocolSettings UDP { get { return system.UDP; } }
 
         /// <summary>
-        /// Gets the miscellaneous connection settings.
+        /// Gets or sets the maximum number of pending connections that can be queued.
         /// </summary>
-        public ConnectionSettings ConnectionSettings { get { return system.ConnectionSettings; } }
+        public int MaxPendingConnections { get { return system.MaxPendingConnections; } set { system.MaxPendingConnections = value; } }
+
+        /// <summary>
+        /// Gets the serialize manager for handling serialization and deserialization of objects.
+        /// </summary>
+        public SerializeManager Serializer { get { return system.Serializer; } }
 
         /// <summary>
         /// Gets the port of the listener.

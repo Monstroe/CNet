@@ -25,9 +25,9 @@ namespace CNet
         public ProtocolSettings UDP { get { return system.UDP; } }
 
         /// <summary>
-        /// Gets the miscellaneous connection settings.
+        /// Gets the serialize manager for handling serialization and deserialization of objects.
         /// </summary>
-        public ConnectionSettings ConnectionSettings { get { return system.ConnectionSettings; } }
+        public SerializeManager Serializer { get { return system.Serializer; } }
 
         /// <summary>
         /// Gets the address of the server.

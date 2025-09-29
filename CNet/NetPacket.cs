@@ -387,7 +387,7 @@ namespace CNet
         /// <param name="value">The network syncable class.</param>
         public void SerializeClass<T>(T value) where T : class
         {
-            system.SerializeManager.Write(this, value);
+            system.Serializer.Write(this, value);
         }
 
         /// <summary>
@@ -397,7 +397,7 @@ namespace CNet
         /// <param name="value">The network syncable struct.</param>
         public void SerializeStruct<T>(T value) where T : struct
         {
-            system.SerializeManager.Write(this, value);
+            system.Serializer.Write(this, value);
         }
 
         /// <summary>
@@ -811,7 +811,7 @@ namespace CNet
         public T DeserializeClass<T>(bool moveIndexPosition = true) where T : class, new()
         {
             int tempIndex = currentIndex;
-            T obj = system.SerializeManager.Read<T>(this);
+            T obj = system.Serializer.Read<T>(this);
             currentIndex = moveIndexPosition ? currentIndex : tempIndex;
             return obj;
         }
@@ -826,7 +826,7 @@ namespace CNet
         public T DeserializeStruct<T>(bool moveIndexPosition = true) where T : struct
         {
             int tempIndex = currentIndex;
-            T obj = system.SerializeManager.Read<T>(this);
+            T obj = system.Serializer.Read<T>(this);
             currentIndex = moveIndexPosition ? currentIndex : tempIndex;
             return obj;
         }

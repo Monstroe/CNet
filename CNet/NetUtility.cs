@@ -58,44 +58,6 @@ namespace CNet
     }
 
     /// <summary>
-    /// Represents the connection settings for network communication
-    /// </summary>
-    public class ConnectionSettings
-    {
-        /// <summary>
-        /// Gets or sets the maximum number of pending connections that can be queued.
-        /// </summary>
-        /// <remarks>
-        /// This property is only used when the system is a listener.
-        /// </remarks>
-        public int MAX_PENDING_CONNECTIONS { get; set; }
-
-        /// <summary>
-        /// Gets or sets the receive timeout when one system is waiting for connection data from another system.
-        /// </summary>
-        /// <remarks>
-        /// This property is in milliseconds.
-        /// </remarks>
-        public int DATA_RECEIVE_TIMEOUT { get; set; }
-
-        /// <summary>
-        /// Gets or sets the rate at which invalid connection tokens are removed from the system.
-        /// </summary>
-        /// <remarks>
-        /// This property is in iterations per second.
-        /// </remarks>
-        public int INVALID_TOKEN_REMOVAL_RATE { get; set; }
-
-        /// <summary>
-        /// Gets or sets the UDP packet send rate when the client is sending UDP connection data to the listener.
-        /// </summary>
-        /// <remarks>
-        /// This property is in packets per second.
-        /// </remarks>
-        public int UDP_SEND_RATE { get; set; }
-    }
-
-    /// <summary>
     /// Represents the packet protocol for network communication.
     /// </summary>
     public enum TransportProtocol

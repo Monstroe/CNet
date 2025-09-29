@@ -49,6 +49,7 @@ class Server : IEventNetListener
     {
         listener = new NetListener();
         listener.RegisterInterface(this);
+        listener.Serializer.RegisterAssembly(Assembly.GetEntryAssembly()!);
         connectionKey = string.Empty;
     }
 

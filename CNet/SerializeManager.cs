@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace CNet
 {
-    internal class SerializeManager
+    public class SerializeManager
     {
         private readonly Dictionary<Type, Action<NetPacket, object, FieldInfo>> writeFieldActions = new Dictionary<Type, Action<NetPacket, object, FieldInfo>>();
         private readonly Dictionary<Type, Func<NetPacket, object>> readFieldActions = new Dictionary<Type, Func<NetPacket, object>>();
@@ -14,15 +14,15 @@ namespace CNet
         private readonly Dictionary<Type, Func<NetPacket, object>> readPropertyActions = new Dictionary<Type, Func<NetPacket, object>>();
 
         private readonly Dictionary<Type, MemberInfo[]> membersCache = new Dictionary<Type, MemberInfo[]>();
+        private readonly List<Assembly> registeredAssemblies = new List<Assembly>();
 
-        public SerializeManager()
+        internal SerializeManager()
         {
             AddReadActions();
             AddWriteActions();
-            CacheMembers();
         }
 
-        public void Write<T>(NetPacket packet, T obj)
+        internal void Write<T>(NetPacket packet, T obj)
         {
             if (obj == null)
             {
@@ -91,7 +91,7 @@ namespace CNet
             }
         }
 
-        public T Read<T>(NetPacket packet)
+        internal T Read<T>(NetPacket packet)
         {
             return (T)Read(typeof(T), packet);
         }
@@ -165,9 +165,12 @@ namespace CNet
             return obj;
         }
 
-        private void CacheMembers()
+        public void RegisterAssembly(Assembly assembly)
         {
-            Assembly assembly = Assembly.GetEntryAssembly();
+            if (registeredAssemblies.Contains(assembly))
+            {
+                throw new Exception("Assembly " + assembly.FullName + " has already been registered.");
+            }
 
             foreach (Type type in assembly.GetTypes())
             {
@@ -201,6 +204,8 @@ namespace CNet
 
                 membersCache[type] = members;
             }
+
+            registeredAssemblies.Add(assembly);
         }
 
         private void CheckFields(Type type)

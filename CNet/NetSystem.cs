@@ -67,9 +67,14 @@ namespace CNet
         public ProtocolSettings UDP { get; }
 
         /// <summary>
-        /// Gets the miscellaneous connection settings.
+        /// Gets or sets the maximum number of pending connections that can be queued.
         /// </summary>
-        public ConnectionSettings ConnectionSettings { get; }
+        public int MaxPendingConnections { get; set; }
+
+        /// <summary>
+        /// Gets the serialize manager for handling serialization and deserialization of objects.
+        /// </summary>
+        public SerializeManager Serializer { get; }
 
         /// <summary>
         /// Gets the local end point.
@@ -111,7 +116,6 @@ namespace CNet
         }
 
         internal ArrayPool<byte> PacketPool { get; private set; }
-        internal SerializeManager SerializeManager { get; }
 
         private readonly ConcurrentDictionary<IPEndPoint, NetEndPoint> connectionsTCP;
         private readonly ConcurrentDictionary<IPEndPoint, NetEndPoint> connectionsUDP;
@@ -136,8 +140,8 @@ namespace CNet
 
             TCP = new ProtocolSettings
             {
-                HEARTBEAT_INTERVAL = 5000,
-                CONNECTION_TIMEOUT = 10000,
+                HEARTBEAT_INTERVAL = 2500,
+                CONNECTION_TIMEOUT = 5000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
                 MAX_PACKET_SIZE = 1024
@@ -145,23 +149,15 @@ namespace CNet
 
             UDP = new ProtocolSettings
             {
-                HEARTBEAT_INTERVAL = 1000,
-                CONNECTION_TIMEOUT = 10000,
+                HEARTBEAT_INTERVAL = 500,
+                CONNECTION_TIMEOUT = 5000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
                 MAX_PACKET_SIZE = 1024
             };
 
-            ConnectionSettings = new ConnectionSettings
-            {
-                MAX_PENDING_CONNECTIONS = 100,
-                DATA_RECEIVE_TIMEOUT = 5000,
-                INVALID_TOKEN_REMOVAL_RATE = 2,
-                UDP_SEND_RATE = 4
-            };
-
+            Serializer = new SerializeManager();
             PacketPool = ArrayPool<byte>.Shared;
-            SerializeManager = new SerializeManager();
 
             connectionsTCP = new ConcurrentDictionary<IPEndPoint, NetEndPoint>();
             connectionsUDP = new ConcurrentDictionary<IPEndPoint, NetEndPoint>();
@@ -279,7 +275,7 @@ namespace CNet
 
                 try
                 {
-                    var (keyPacket, validKeyPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    var (keyPacket, validKeyPacket) = await ReceiveTCPAsync(remoteEP, TCP.CONNECTION_TIMEOUT);
                     if (keyPacket.UnreadLength < sizeof(int))
                     {
                         DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
@@ -311,7 +307,7 @@ namespace CNet
                         }
                     }
 
-                    var (tokenPacket, validTokenPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    var (tokenPacket, validTokenPacket) = await ReceiveTCPAsync(remoteEP, TCP.CONNECTION_TIMEOUT);
                     if (tokenPacket.UnreadLength < sizeof(int) || !validTokenPacket)
                     {
                         DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
@@ -345,11 +341,11 @@ namespace CNet
                                 SendOnMainThread(remoteEP, udpPacket, TransportProtocol.UDP, false, true, false);
                             }
 
-                            await Task.Delay(1000 / ConnectionSettings.UDP_SEND_RATE, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
+                            await Task.Delay(UDP.HEARTBEAT_INTERVAL, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
                         }
                     }, mainCancelTokenSource.Token);
 
-                    var (acceptedPacket, validAcceptedPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                    var (acceptedPacket, validAcceptedPacket) = await ReceiveTCPAsync(remoteEP, TCP.CONNECTION_TIMEOUT);
                     stopSendingUdp = true;
 
                     if (acceptedPacket.UnreadLength < sizeof(int) || !validAcceptedPacket)
@@ -430,7 +426,7 @@ namespace CNet
                 tcpSocket!.Bind(ep);
                 udpSocket!.Bind(ep);
 
-                tcpSocket!.Listen(ConnectionSettings.MAX_PENDING_CONNECTIONS);
+                tcpSocket!.Listen(MaxPendingConnections);
 
                 LocalEndPoint = new NetEndPoint((IPEndPoint)tcpSocket.LocalEndPoint, (IPEndPoint)udpSocket.LocalEndPoint, tcpSocket, 0, this);
                 systemStarted = true;
@@ -499,7 +495,7 @@ namespace CNet
                             SendOnMainThread(remoteEP, packet, TransportProtocol.TCP, false, true, true);
                         }
 
-                        var (connectionKeyPacket, validPacket) = await ReceiveTCPAsync(remoteEP, ConnectionSettings.DATA_RECEIVE_TIMEOUT);
+                        var (connectionKeyPacket, validPacket) = await ReceiveTCPAsync(remoteEP, TCP.CONNECTION_TIMEOUT);
                         if (connectionKeyPacket.UnreadLength < sizeof(int) || !validPacket)
                         {
                             DisconnectOnMainThread(remoteEP, new NetDisconnect(DisconnectionCode.InvalidPacket, null, null), false, false);
@@ -521,7 +517,7 @@ namespace CNet
                             {
                                 ulong token = GenerateToken();
 
-                                if (!connectingClients.TryAdd(token, new NetConnect(remoteEP, DateTime.UtcNow.AddMilliseconds(ConnectionSettings.DATA_RECEIVE_TIMEOUT))))
+                                if (!connectingClients.TryAdd(token, new NetConnect(remoteEP, DateTime.UtcNow.AddMilliseconds(UDP.CONNECTION_TIMEOUT))))
                                 {
                                     throw new Exception("Failed to add connection token to connectingClients");
                                 }
@@ -1144,7 +1140,7 @@ namespace CNet
                             }
                         }
 
-                        await Task.Delay(1000 / ConnectionSettings.INVALID_TOKEN_REMOVAL_RATE, mainCancelTokenSource.Token);
+                        await Task.Delay(UDP.HEARTBEAT_INTERVAL / 2, mainCancelTokenSource.Token);
                     }
 
                 }
@@ -1173,7 +1169,7 @@ namespace CNet
                 {
                     if (code == (int)DisconnectionCode.ConnectionClosedWithMessage && bufferPacket != null)
                     {
-                        var (finalData, validPacket) = await ReceiveTCPAsync(netEndPoint, ConnectionSettings.DATA_RECEIVE_TIMEOUT, bufferPacket);
+                        var (finalData, validPacket) = await ReceiveTCPAsync(netEndPoint, TCP.CONNECTION_TIMEOUT, bufferPacket);
 
                         if (validPacket)
                         {
