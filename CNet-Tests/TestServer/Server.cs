@@ -8,8 +8,8 @@ namespace TestServer;
 public class NetClass
 {
     public int IntValue { get; set; }
-    public string StringValue { get; set; }
-    private float[] FloatValue;
+    public string? StringValue { get; set; }
+    private float[]? FloatValue;
     public NetStruct NetStructValue { get; set; }
 
     public void SetFloatValue(float[] value)
@@ -17,7 +17,7 @@ public class NetClass
         FloatValue = value;
     }
 
-    public float[] GetFloatValue()
+    public float[]? GetFloatValue()
     {
         return FloatValue;
     }
@@ -34,35 +34,31 @@ public struct NetStruct
 class Server : IEventNetListener
 {
     public static Server Instance { get; } = new Server();
-    public string IPAddress
-    {
-        get { return listener.Address; }
-        set { listener.Address = value; }
-    }
 
     public int Port
     {
         get { return listener.Port; }
-        set { listener.Port = value; }
     }
 
-    private NetListener listener;
+    private readonly NetListener listener;
 
     private int packetCount = 0;
+    private string connectionKey;
 
     private Server()
     {
         listener = new NetListener();
         listener.RegisterInterface(this);
+        listener.Serializer.RegisterAssembly(Assembly.GetEntryAssembly()!);
+        connectionKey = string.Empty;
     }
 
-    public void Start(string address, int port)
+    public void Start(int port, string connectionKey)
     {
         Console.WriteLine("Server Started...");
-        listener.Address = address;
-        listener.Port = port;
+        this.connectionKey = connectionKey;
 
-        listener.Listen();
+        listener.Listen(port);
         Console.WriteLine("Server initialized and is listening for connections...");
         while (true)
         {
@@ -73,15 +69,15 @@ class Server : IEventNetListener
 
     public void OnConnectionRequest(NetRequest request)
     {
-        Console.WriteLine("Connection Request: " + request.ClientEndPoint.ToString());
-        request.Accept();
+        Console.WriteLine("Connection Request: " + request.ConnectingEP.TCPEndPoint.ToString() + ", ID: " + request.ConnectingEP.ID);
+        request.AcceptIfKey(connectionKey);
     }
 
-    public void OnClientConnected(NetEndPoint remoteEndPoint)
+    public void OnClientConnected(NetEndPoint remoteEP)
     {
-        Console.WriteLine("Client " + remoteEndPoint.TCPEndPoint + " Connected");
+        Console.WriteLine("Client " + remoteEP.TCPEndPoint + " Connected");
 
-        using (NetPacket packet = new NetPacket(listener.System, PacketProtocol.TCP))
+        using (NetPacket packet = new NetPacket(listener.System, TransportProtocol.TCP))
         {
             NetStruct netStruct = new NetStruct();
             netStruct.IntValue = 10;
@@ -95,22 +91,22 @@ class Server : IEventNetListener
             netClass.NetStructValue = netStruct;
 
             packet.SerializeClass(netClass);
-            remoteEndPoint.Send(packet, PacketProtocol.TCP);
+            remoteEP.Send(packet, TransportProtocol.TCP);
         }
     }
 
-    public void OnClientDisconnected(NetEndPoint remoteEndPoint, NetDisconnect disconnect)
+    public void OnClientDisconnected(NetEndPoint remoteEP, NetDisconnect disconnect)
     {
-        Console.WriteLine("Client " + remoteEndPoint.TCPEndPoint + " Disconnected: " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? " - " + disconnect.DisconnectData.ReadString() : ""));
+        Console.WriteLine("Client " + remoteEP.TCPEndPoint + " Disconnected: " + disconnect.DisconnectCode.ToString() + (disconnect.DisconnectData != null ? " - " + disconnect.DisconnectData.ReadString() : ""));
     }
 
-    public void OnPacketReceived(NetEndPoint remoteEndPoint, NetPacket packet, PacketProtocol protocol)
+    public void OnPacketReceived(NetEndPoint remoteEP, NetPacket packet, TransportProtocol protocol)
     {
         NetClass netClass = packet.DeserializeClass<NetClass>();
-        Console.WriteLine("Packet Receive from " + remoteEndPoint.TCPEndPoint + " with class: " + netClass.IntValue + ", " + netClass.StringValue + ", (" + netClass.GetFloatValue()[0] + ", " + netClass.GetFloatValue()[1] + ", " + netClass.GetFloatValue()[2] + ")" + ", struct(" + netClass.NetStructValue.IntValue + ", " + netClass.NetStructValue.StringValue + ", " + netClass.NetStructValue.FloatValue + ")");
+        Console.WriteLine("Packet Received from " + remoteEP.TCPEndPoint + " with class: " + netClass.IntValue + ", " + netClass.StringValue + ", (" + netClass.GetFloatValue()![0] + ", " + netClass.GetFloatValue()![1] + ", " + netClass.GetFloatValue()![2] + ")" + ", struct(" + netClass.NetStructValue.IntValue + ", " + netClass.NetStructValue.StringValue + ", " + netClass.NetStructValue.FloatValue + ")");
         packetCount++;
 
-        using (NetPacket respPacket = new NetPacket(listener.System, PacketProtocol.TCP))
+        using (NetPacket respPacket = new NetPacket(listener.System, TransportProtocol.TCP))
         {
             NetStruct newNetStruct = new NetStruct();
             newNetStruct.IntValue = 10;
@@ -124,18 +120,18 @@ class Server : IEventNetListener
             newNetClass.NetStructValue = newNetStruct;
 
             respPacket.SerializeClass(newNetClass);
-            remoteEndPoint.Send(respPacket, PacketProtocol.TCP);
+            remoteEP.Send(respPacket, TransportProtocol.TCP);
         }
     }
 
-    public void OnNetworkError(NetEndPoint remoteEndPoint, SocketException socketException)
+    public void OnNetworkError(NetEndPoint? remoteEP, SocketError error)
     {
-        Console.WriteLine("Error: " + socketException.SocketErrorCode.ToString());
+        Console.WriteLine("Error: " + error.ToString());
     }
 
     // Main Method
     static void Main(string[] args)
     {
-        Server.Instance.Start("127.0.0.1", 7777);
+        Server.Instance.Start(7777, "CNetTest");
     }
 }

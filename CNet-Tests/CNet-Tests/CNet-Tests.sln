@@ -1,9 +1,8 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.5.002.0
+VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CNet", "CNet.csproj", "{DD406513-E6FF-4F76-BB74-34F1AD12FF82}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNet-Tests", "CNet-Tests.csproj", "{F99CA0A5-3F25-B6AB-F817-5AF555E1233A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +10,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DD406513-E6FF-4F76-BB74-34F1AD12FF82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DD406513-E6FF-4F76-BB74-34F1AD12FF82}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DD406513-E6FF-4F76-BB74-34F1AD12FF82}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DD406513-E6FF-4F76-BB74-34F1AD12FF82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F99CA0A5-3F25-B6AB-F817-5AF555E1233A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F99CA0A5-3F25-B6AB-F817-5AF555E1233A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F99CA0A5-3F25-B6AB-F817-5AF555E1233A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F99CA0A5-3F25-B6AB-F817-5AF555E1233A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {3FF23042-8F06-46F5-A4F2-1D1E68730DBB}
+		SolutionGuid = {27C9BB8D-AB6D-4F7D-A109-72C9602A5025}
 	EndGlobalSection
 EndGlobal
