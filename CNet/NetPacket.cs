@@ -841,7 +841,7 @@ namespace CNet
         // This method will write a byte array to the stream without adding its length beforehand (ONLY USED INTERNALLY)
         internal void SetBytes(ArraySegment<byte> value)
         {
-            Buffer.BlockCopy(value.Array, value.Offset, buffer, count, value.Count);
+            Buffer.BlockCopy(value.Array!, value.Offset, buffer, count, value.Count);
             count += value.Count;
         }
 
