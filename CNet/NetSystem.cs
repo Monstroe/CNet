@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -192,7 +191,7 @@ namespace CNet
                 udpSocket.SendBufferSize = UDP.SOCKET_SEND_BUFFER_SIZE;
             }
 
-            LocalEndPoint = new NetEndPoint((IPEndPoint)tcpSocket.LocalEndPoint, (IPEndPoint)udpSocket.LocalEndPoint, tcpSocket, 0, this);
+            LocalEndPoint = new NetEndPoint((IPEndPoint)tcpSocket.LocalEndPoint!, (IPEndPoint)udpSocket.LocalEndPoint!, tcpSocket, 0, this);
         }
 
         /// <summary>
@@ -254,7 +253,7 @@ namespace CNet
             {
                 try
                 {
-                    await tcpSocket.ConnectAsync(Address, Port);
+                    await tcpSocket!.ConnectAsync(Address, Port);
                     tcpConnected = true;
                 }
                 catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
@@ -428,7 +427,7 @@ namespace CNet
 
                 tcpSocket!.Listen(MaxPendingConnections);
 
-                LocalEndPoint = new NetEndPoint((IPEndPoint)tcpSocket.LocalEndPoint, (IPEndPoint)udpSocket.LocalEndPoint, tcpSocket, 0, this);
+                LocalEndPoint = new NetEndPoint((IPEndPoint)tcpSocket.LocalEndPoint!, (IPEndPoint)udpSocket.LocalEndPoint!, tcpSocket, 0, this);
                 systemStarted = true;
 
                 AcceptClients();
@@ -452,12 +451,19 @@ namespace CNet
                 {
                     try
                     {
-                        Socket clientTcpSock = await tcpSocket.AcceptAsync();
-                        uint newID = GenerateClientID();
-                        NetEndPoint clientEP = new NetEndPoint((IPEndPoint)clientTcpSock.RemoteEndPoint, null, clientTcpSock, newID, this);
-                        NetRequest request = new NetRequest(clientEP, this);
-
-                        HandleConnectionRequestOnMainThread(request);
+                        Socket clientTcpSock = await tcpSocket!.AcceptAsync();
+                        EndPoint? clientEndPoint = clientTcpSock.RemoteEndPoint;
+                        if (clientEndPoint != null)
+                        {
+                            uint newID = GenerateClientID();
+                            NetEndPoint clientEP = new NetEndPoint((IPEndPoint)clientEndPoint, null, clientTcpSock, newID, this);
+                            NetRequest request = new NetRequest(clientEP, this);
+                            HandleConnectionRequestOnMainThread(request);
+                        }
+                        else
+                        {
+                            clientTcpSock.Dispose();
+                        }
                     }
                     catch (SocketException ex)
                     {
@@ -602,7 +608,7 @@ namespace CNet
                     }
                     else
                     {
-                        await udpSocket.SendToAsync(packet.ByteSegment, SocketFlags.None, remoteEP.UDPEndPoint);
+                        await udpSocket!.SendToAsync(packet.ByteSegment, SocketFlags.None, remoteEP.UDPEndPoint!);
                         remoteEP.UDPHeartbeatInterval = 0;
                         returnValue = true;
                     }
