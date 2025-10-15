@@ -139,7 +139,7 @@ namespace CNet
 
             TCP = new ProtocolSettings
             {
-                HEARTBEAT_INTERVAL = 2500,
+                HEARTBEAT_INTERVAL = 1000,
                 CONNECTION_TIMEOUT = 5000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
@@ -583,6 +583,16 @@ namespace CNet
 
             NetPacket sendPacket = new NetPacket(this, protocol);
             sendPacket.SetBytes(packet.ByteSegment);
+
+            if (protocol == TransportProtocol.TCP)
+            {
+                remoteEP.TCPHeartbeatInterval = 0;
+            }
+            else
+            {
+                remoteEP.UDPHeartbeatInterval = 0;
+            }
+
             ThreadManager.ExecuteOnMainThread(async () => await SendInternal(remoteEP, sendPacket, protocol, checkConnected, disconnectOnError, insertLength, true));
         }
 
@@ -603,13 +613,11 @@ namespace CNet
                     if (protocol == TransportProtocol.TCP)
                     {
                         await remoteEP.TCPSocket.SendAsync(packet.ByteSegment, SocketFlags.None);
-                        remoteEP.TCPHeartbeatInterval = 0;
                         returnValue = true;
                     }
                     else
                     {
                         await udpSocket!.SendToAsync(packet.ByteSegment, SocketFlags.None, remoteEP.UDPEndPoint!);
-                        remoteEP.UDPHeartbeatInterval = 0;
                         returnValue = true;
                     }
                 }
