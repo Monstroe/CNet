@@ -24,10 +24,10 @@ namespace CNet
         public uint ID { get; internal set; }
 
         internal Socket TCPSocket { get; }
-        internal float TCPConnectionTimeoutTime { get; set; } // milliseconds
-        internal float TCPHeartbeatInterval { get; set; } // milliseconds
-        internal float UDPConnectionTimeoutTime { get; set; } // milliseconds
-        internal float UDPHeartbeatInterval { get; set; } // milliseconds
+        internal double TCPConnectionTimeoutTime { get; set; } // milliseconds
+        internal double TCPHeartbeatInterval { get; set; } // milliseconds
+        internal double UDPConnectionTimeoutTime { get; set; } // milliseconds
+        internal double UDPHeartbeatInterval { get; set; } // milliseconds
 
         private readonly NetSystem netSystem;
 

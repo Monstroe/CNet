@@ -140,7 +140,7 @@ namespace CNet
             TCP = new ProtocolSettings
             {
                 HEARTBEAT_INTERVAL = 1000,
-                CONNECTION_TIMEOUT = 5000,
+                CONNECTION_TIMEOUT = 15000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
                 MAX_PACKET_SIZE = 1024
@@ -149,7 +149,7 @@ namespace CNet
             UDP = new ProtocolSettings
             {
                 HEARTBEAT_INTERVAL = 500,
-                CONNECTION_TIMEOUT = 5000,
+                CONNECTION_TIMEOUT = 15000,
                 SOCKET_RECEIVE_BUFFER_SIZE = 0,
                 SOCKET_SEND_BUFFER_SIZE = 0,
                 MAX_PACKET_SIZE = 1024
@@ -914,8 +914,12 @@ namespace CNet
             {
                 try
                 {
+                    int checkInterval = TCP.HEARTBEAT_INTERVAL / 5;
+                    DateTime lastCheckTime = DateTime.UtcNow;
                     while (!mainCancelTokenSource.IsCancellationRequested)
                     {
+                        double accumulatedTime = (float)(DateTime.UtcNow - lastCheckTime).TotalMilliseconds;
+                        lastCheckTime = DateTime.UtcNow;
                         foreach (var remoteEP in connectionsTCP.Values)
                         {
                             if (remoteEP.TCPConnectionTimeoutTime >= TCP.CONNECTION_TIMEOUT)
@@ -933,10 +937,10 @@ namespace CNet
                                 }
                             }
 
-                            remoteEP.TCPConnectionTimeoutTime += TCP.HEARTBEAT_INTERVAL;
-                            remoteEP.TCPHeartbeatInterval += TCP.HEARTBEAT_INTERVAL;
+                            remoteEP.TCPConnectionTimeoutTime += accumulatedTime;
+                            remoteEP.TCPHeartbeatInterval += accumulatedTime;
                         }
-                        await Task.Delay(TCP.HEARTBEAT_INTERVAL, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
+                        await Task.Delay(checkInterval, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
                     }
                 }
                 catch (OperationCanceledException) { }
@@ -1104,8 +1108,12 @@ namespace CNet
             {
                 try
                 {
+                    int checkInterval = UDP.HEARTBEAT_INTERVAL / 5;
+                    DateTime lastCheckTime = DateTime.UtcNow;
                     while (!mainCancelTokenSource.IsCancellationRequested)
                     {
+                        double accumulatedTime = (float)(DateTime.UtcNow - lastCheckTime).TotalMilliseconds;
+                        lastCheckTime = DateTime.UtcNow;
                         foreach (var remoteEP in connectionsUDP.Values)
                         {
                             if (remoteEP.UDPConnectionTimeoutTime >= UDP.CONNECTION_TIMEOUT)
@@ -1123,10 +1131,10 @@ namespace CNet
                                 }
                             }
 
-                            remoteEP.UDPConnectionTimeoutTime += UDP.HEARTBEAT_INTERVAL;
-                            remoteEP.UDPHeartbeatInterval += UDP.HEARTBEAT_INTERVAL;
+                            remoteEP.UDPConnectionTimeoutTime += accumulatedTime;
+                            remoteEP.UDPHeartbeatInterval += accumulatedTime;
                         }
-                        await Task.Delay(UDP.HEARTBEAT_INTERVAL, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
+                        await Task.Delay(checkInterval, mainCancelTokenSource.Token); // <--- This is why the OperationCanceledException is caught
                     }
                 }
                 catch (OperationCanceledException) { }
@@ -1139,6 +1147,7 @@ namespace CNet
             {
                 try
                 {
+                    int checkInterval = UDP.HEARTBEAT_INTERVAL / 5;
                     while (!mainCancelTokenSource.IsCancellationRequested)
                     {
                         foreach (var (token, netConnect) in connectingClients)
@@ -1154,7 +1163,7 @@ namespace CNet
                             }
                         }
 
-                        await Task.Delay(UDP.HEARTBEAT_INTERVAL / 2, mainCancelTokenSource.Token);
+                        await Task.Delay(checkInterval, mainCancelTokenSource.Token);
                     }
 
                 }
