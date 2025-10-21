@@ -256,14 +256,27 @@ namespace CNet
                     await tcpSocket!.ConnectAsync(Address, Port);
                     tcpConnected = true;
                 }
-                catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
+                catch (SocketException ex)
+                {
+                    ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode);
+                    return;
+                }
+                catch (ObjectDisposedException) { return; }
+                catch (OperationCanceledException) { return; }
+
 
                 try
                 {
                     udpSocket?.Connect(Address, Port);
                     udpConnected = true;
                 }
-                catch (SocketException ex) { ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode); }
+                catch (SocketException ex)
+                {
+                    ThrowErrorOnMainThread(remoteEP, ex.SocketErrorCode);
+                    return;
+                }
+                catch (ObjectDisposedException) { return; }
+                catch (OperationCanceledException) { return; }
 
                 systemStarted = true;
                 if (!tcpConnected || !udpConnected)
