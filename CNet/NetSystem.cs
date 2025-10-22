@@ -994,7 +994,7 @@ namespace CNet
                             }
                             else
                             {
-                                if (ex.SocketErrorCode != SocketError.Interrupted)
+                                if (ex.SocketErrorCode != SocketError.Interrupted && ex.SocketErrorCode != SocketError.ConnectionReset)
                                 {
                                     ThrowErrorOnMainThread(null, ex.SocketErrorCode);
                                 }
